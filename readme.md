@@ -1,6 +1,26 @@
 # GPU Accelerated RayTracing for VR
 Chris Kaffine and Zach Shearer
 
+##Checkpoint Summary
+So far what we've completed is a functional, albeit unoptimized and slow raytracer in CUDA, and a functioning Oculus/OpenGL environment that's capable of interacting with CUDA code. At this time, the two are still separate tasks, and because of this, the code isn't on this page yet. We ran into some issues with getting the Oculus to work at first, like that our testing laptop's video card doesn't support any version of the SDK after 0.7, and then getting a reasonable development environment working on Windows. In the end, for ease of development, we rolled back to using an older version of the SDK that supports linux, and moving development over to a linux environment.
+
+In terms of what we'll be able to produce at the end, we should still be able to do everything outlined in the original writeup, although at this point the stretch goals are looking unlikely. For the parallelism contest, our plan is to capture some test inputs (head movements, etc.), run the raytracer on a testing harness on latedays, and capture the output as a video. Since the latedays machines have the strongest GPUs of any machines here, we want to run our finals tests on it, but setting up an Oculus to work on latedays seems infeasible.
+
+The outstanding issues are to actually make the raytracer run at a more acceptable speed, and setting up / dealing with capturing movement data from the Oculus. There's also the potential for misrepresented results, since our final tests will be on a machine that's not actually outputting the images to a screen, but just a file, which might be a nontrivial amount faster than actually displaying the images. So hitting the goal of "acceptable framerate" there might not translate to actually acceptable framerates on actual hardware.
+
+##Updated Schedule
+**By 4/22:** Combine the raytracing and VR parts of the project. Additionally, plan out what the potential best ways to improve performance will be, and research more about GPU raytracing. (Both people)
+
+**By 4/26:** Implement the previously outlined CUDA performance boosts, seeing which perform the best (Zach). Additionally, consolidating the workloads, to be something like all the ray-scene intersections are processed at once, and then all of the material processing is done next. (Chris)
+
+**By 4/29:** Research and begin implementing potential VR-specific optimizations, like processing the middle of each eye in more detail. (Chris) Additionally, finish up miscellaneous outstanding CUDA issues, and being writing the testing harness to be run on latedays. (Zach)
+
+**By 5/3:** Finish implementing VR-specific optimizations, and analyze which are actually worthwhile to keep, and do general miscellaneous performance boosts, that arose from our other code. (Chris) Additionally, finish writing the testing harness to be run on latedays, and begin actually running tests on latedays. Time permitting, look into implementing more complex raytracing algorithms. (Zach)
+
+**By 5/9:** Any last minute outstanding performance / correctness issues. (Both) Perform actual testing, and create a way to get the output from latedays to get back onto the Oculus to be used in a demo. Time permitting, implement more complex raytracing algorithms for faster performance.
+
+##Original Project Proposal
+
 ##Summary
 The goal of our project is to write a fully functional raytracer in CUDA to render photorealistic images to an Oculus in real time. We will take advantage of the parallel processing power of a modern GPU to accelerate the raytracer to the point where it can meet the low latency required of VR applications.
 
