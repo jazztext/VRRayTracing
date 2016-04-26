@@ -128,8 +128,6 @@ void Application::load(SceneInfo* sceneInfo) {
                 min_view_distance,
                 max_view_distance);
 
-    std::cout << camera.position() << " " << camera.view_point() << "\n";
-
   }
 
   // set default draw styles for meshEdit -
