@@ -13,8 +13,8 @@ struct Ray {
 
   Vector3D o;  ///< origin
   Vector3D d;  ///< direction
-  double min_t; ///< treat the ray as a segment (ray "begin" at max_t)
-  double max_t; ///< treat the ray as a segment (ray "ends" at max_t)
+  float min_t; ///< treat the ray as a segment (ray "begin" at max_t)
+  float max_t; ///< treat the ray as a segment (ray "ends" at max_t)
 
   Vector3D inv_d;  ///< component wise inverse
   int sign[3];     ///< fast ray-bbox intersection
@@ -48,7 +48,7 @@ struct Ray {
    * \param depth depth of the ray
    */
   __device__
-  Ray(const Vector3D& o, const Vector3D& d, double max_t, int depth = 0)
+  Ray(const Vector3D& o, const Vector3D& d, float max_t, int depth = 0)
         : o(o), d(d), min_t(0.0), max_t(max_t), depth(depth) {
     inv_d = Vector3D(1 / d.x, 1 / d.y, 1 / d.z);
     sign[0] = (inv_d.x < 0);
@@ -62,7 +62,7 @@ struct Ray {
    * Returns the point t * |d| along the ray.
    */
   __device__
-  inline Vector3D at_time(double t) const { return o + t * d; }
+  inline Vector3D at_time(float t) const { return o + t * d; }
 
   /**
    * Returns the result of transforming the ray by the given transformation

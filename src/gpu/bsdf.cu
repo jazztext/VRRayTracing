@@ -8,8 +8,8 @@ void make_coord_space(Matrix3x3& o2w, const Vector3D& n) {
 
     Vector3D z = Vector3D(n.x, n.y, n.z);
     Vector3D h = z;
-    if (fabs(h.x) <= fabs(h.y) && fabs(h.x) <= fabs(h.z)) h.x = 1.0;
-    else if (fabs(h.y) <= fabs(h.x) && fabs(h.y) <= fabs(h.z)) h.y = 1.0;
+    if (fabsf(h.x) <= fabsf(h.y) && fabsf(h.x) <= fabsf(h.z)) h.x = 1.0;
+    else if (fabsf(h.y) <= fabsf(h.x) && fabsf(h.y) <= fabsf(h.z)) h.y = 1.0;
     else h.z = 1.0;
 
     z.normalize();
@@ -27,7 +27,7 @@ void make_coord_space(Matrix3x3& o2w, const Vector3D& n) {
 
 __device__
 Spectrum DiffuseBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return albedo * (1.0 / PI);
+  return albedo * (1.f / PI);
 }
 
 __device__
@@ -182,7 +182,7 @@ Spectrum GlassBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
     *wi = transmit;
     *pdf = 1;
     inMat = !inMat;
-    return transmittance * powf(ni / nt, 2) * (1 / (fabs(cosThetaI)));
+    return transmittance * powf(ni / nt, 2) * (1 / (fabsf(cosThetaI)));
   }
 }
 
@@ -218,8 +218,8 @@ bool BSDF::refract(const Vector3D& wo, Vector3D* wi, float ior, bool inMat) {
   }
   float radicand = 1 - powf(ni / nt, 2) * (1 - powf(wo.z, 2));
   if (radicand < 0) return false; //total internal reflection
-  wi->z = (wo.z > 0) ? -sqrt(radicand) : sqrt(radicand);
-  float scale = sqrt(1 - radicand) / sqrt(powf(wo.x, 2) + powf(wo.y, 2));
+  wi->z = (wo.z > 0) ? -sqrtf(radicand) : sqrtf(radicand);
+  float scale = sqrtf(1 - radicand) / sqrtf(powf(wo.x, 2) + powf(wo.y, 2));
   wi->x = -scale * wo.x;
   wi->y = -scale * wo.y;
   return true;

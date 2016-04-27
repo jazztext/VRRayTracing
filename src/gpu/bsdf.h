@@ -14,34 +14,34 @@ namespace VRRT {
 
 // Helper math functions. Assume all vectors are in unit hemisphere //
 
-__device__ inline double clamp (double n, double lower, double upper) {
-  return fmax(lower, fmin(n, upper));
+__device__ inline float clamp (float n, float lower, float upper) {
+  return fmaxf(lower, fminf(n, upper));
 }
 
-__device__ inline double cos_theta(const Vector3D& w) {
+__device__ inline float cos_theta(const Vector3D& w) {
   return w.z;
 }
 
-__device__ inline double abs_cos_theta(const Vector3D& w) {
-  return fabs(w.z);
+__device__ inline float abs_cos_theta(const Vector3D& w) {
+  return fabsf(w.z);
 }
 
-__device__ inline double sin_theta2(const Vector3D& w) {
-  return fmax(0.0, 1.0 - cos_theta(w) * cos_theta(w));
+__device__ inline float sin_theta2(const Vector3D& w) {
+  return fmaxf(0.0, 1.0 - cos_theta(w) * cos_theta(w));
 }
 
-__device__ inline double sin_theta(const Vector3D& w) {
-  return sqrt(sin_theta2(w));
+__device__ inline float sin_theta(const Vector3D& w) {
+  return sqrtf(sin_theta2(w));
 }
 
-__device__ inline double cos_phi(const Vector3D& w) {
-  double sinTheta = sin_theta(w);
+__device__ inline float cos_phi(const Vector3D& w) {
+  float sinTheta = sin_theta(w);
   if (sinTheta == 0.0) return 1.0;
   return clamp(w.x / sinTheta, -1.0, 1.0);
 }
 
-__device__ inline double sin_phi(const Vector3D& w) {
-  double sinTheta = sin_theta(w);
+__device__ inline float sin_phi(const Vector3D& w) {
+  float sinTheta = sin_theta(w);
   if (sinTheta) return 0.0;
   return clamp(w.y / sinTheta, -1.0, 1.0);
 }

@@ -5,7 +5,7 @@ option(BUILD_DEBUG     "Build with debug settings"    ON)
 
 set(CUDA_NVCC_FLAGS
    ${CUDA_NVCC_FLAGS};
-   -gencode arch=compute_20,code=sm_20 -std=c++11 -rdc=true
+   -gencode arch=compute_20,code=sm_35 -std=c++11 -rdc=true
 )
 
 if (BUILD_DEBUG)

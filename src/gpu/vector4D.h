@@ -12,7 +12,7 @@ class Vector4D {
  public:
 
   // components
-  double x, y, z, w;
+  float x, y, z, w;
 
   /**
    * Constructor.
@@ -26,14 +26,14 @@ class Vector4D {
    * Initializes to vector (x,y,z,w).
    */
   __device__
- Vector4D( double x, double y, double z, double w) : x( x ), y( y ), z( z ), w( w ) { }
+ Vector4D( float x, float y, float z, float w) : x( x ), y( y ), z( z ), w( w ) { }
 
   /**
    * Constructor.
    * Initializes to vector (x,y,z,0).
    */
   __device__
- Vector4D( double x, double y, double z) : x( x ), y( y ), z( z ), w( 0.0 ) { }
+ Vector4D( float x, float y, float z) : x( x ), y( y ), z( z ), w( 0.0 ) { }
 
 
   /**
@@ -41,7 +41,7 @@ class Vector4D {
    * Initializes to vector (c,c,c,c)
    */
   __device__
- Vector4D( double c ) : x( c ), y( c ), z( c ), w ( c ) { }
+ Vector4D( float c ) : x( c ), y( c ), z( c ), w ( c ) { }
 
   /**
    * Constructor.
@@ -62,17 +62,17 @@ class Vector4D {
    * Initializes from existing vector3D and w value.
    */
   __device__
- Vector4D( const Vector3D& v, double w ) : x( v.x ), y( v.y ), z( v.z ), w( w ) { }
+ Vector4D( const Vector3D& v, float w ) : x( v.x ), y( v.y ), z( v.z ), w( w ) { }
 
   // returns reference to the specified component (0-based indexing: x, y, z)
   __device__
-  inline double& operator[] ( const int& index ) {
+  inline float& operator[] ( const int& index ) {
     return ( &x )[ index ];
   }
 
   // returns const reference to the specified component (0-based indexing: x, y, z)
   __device__
-  inline const double& operator[] ( const int& index ) const {
+  inline const float& operator[] ( const int& index ) const {
     return ( &x )[ index ];
   }
 
@@ -96,14 +96,14 @@ class Vector4D {
 
   // right scalar multiplication
   __device__
-  inline Vector4D operator*( const double& c ) const {
+  inline Vector4D operator*( const float& c ) const {
     return Vector4D( x * c, y * c, z * c, w * c );
   }
 
   // scalar division
   __device__
-  inline Vector4D operator/( const double& c ) const {
-    const double rc = 1.0/c;
+  inline Vector4D operator/( const float& c ) const {
+    const float rc = 1.0/c;
     return Vector4D( rc * x, rc * y, rc * z, rc * w );
   }
 
@@ -121,13 +121,13 @@ class Vector4D {
 
   // scalar multiplication / assignment
   __device__
-  inline void operator*=( const double& c ) {
+  inline void operator*=( const float& c ) {
     x *= c; y *= c; z *= c; w *= c;
   }
 
   // scalar division / assignment
   __device__
-  inline void operator/=( const double& c ) {
+  inline void operator/=( const float& c ) {
     (*this) *= ( 1./c );
   }
 
@@ -135,15 +135,15 @@ class Vector4D {
    * Returns Euclidean distance metric extended to 4 dimensions.
    */
   __device__
-  inline double norm( void ) const {
-    return sqrt( x*x + y*y + z*z + w*w );
+  inline float norm( void ) const {
+    return sqrtf( x*x + y*y + z*z + w*w );
   }
 
   /**
    * Returns Euclidean length squared.
    */
   __device__
-  inline double norm2( void ) const {
+  inline float norm2( void ) const {
     return x*x + y*y + z*z + w*w;
   }
 
@@ -152,7 +152,7 @@ class Vector4D {
    */
   __device__
   inline Vector4D unit( void ) const {
-    double rNorm = 1. / sqrt( x*x + y*y + z*z + w*w);
+    float rNorm = 1. / sqrtf( x*x + y*y + z*z + w*w);
     return Vector4D( rNorm*x, rNorm*y, rNorm*z );
   }
 
@@ -181,13 +181,13 @@ class Vector4D {
 
 // left scalar multiplication
 __device__
-inline Vector4D operator* ( const double& c, const Vector4D& v ) {
+inline Vector4D operator* ( const float& c, const Vector4D& v ) {
   return Vector4D( c * v.x, c * v.y, c * v.z, c*v.w );
 }
 
 // dot product (a.k.a. inner or scalar product)
 __device__
-inline double dot( const Vector4D& u, const Vector4D& v ) {
+inline float dot( const Vector4D& u, const Vector4D& v ) {
   return u.x*v.x + u.y*v.y + u.z*v.z + u.w*v.w;;
 }
 

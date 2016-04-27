@@ -10,7 +10,7 @@ class Vector2D {
  public:
 
   // components
-  double x, y;
+  float x, y;
 
   /**
    * Constructor.
@@ -24,7 +24,7 @@ class Vector2D {
    * Initializes to vector (a,b).
    */
   __device__
-  Vector2D( double x, double y ) : x( x ), y( y ) { }
+  Vector2D( float x, float y ) : x( x ), y( y ) { }
 
   /**
    * Constructor.
@@ -57,7 +57,7 @@ class Vector2D {
 
   // right scalar multiplication
   __device__
-  inline Vector2D operator*( double r ) const {
+  inline Vector2D operator*( float r ) const {
     Vector2D vr = *this;
     vr *= r;
     return vr;
@@ -65,7 +65,7 @@ class Vector2D {
 
   // scalar division
   __device__
-  inline Vector2D operator/( double r ) const {
+  inline Vector2D operator/( float r ) const {
     Vector2D vr = *this;
     vr /= r;
     return vr;
@@ -87,14 +87,14 @@ class Vector2D {
 
   // scalar multiply by r
   __device__
-  inline void operator*=( double r ) {
+  inline void operator*=( float r ) {
     x *= r;
     y *= r;
   }
 
   // scalar divide by r
   __device__
-  inline void operator/=( double r ) {
+  inline void operator/=( float r ) {
     x /= r;
     y /= r;
   }
@@ -103,15 +103,15 @@ class Vector2D {
    * Returns norm.
    */
   __device__
-  inline double norm( void ) const {
-    return sqrt( x*x + y*y );
+  inline float norm( void ) const {
+    return sqrtf( x*x + y*y );
   }
 
   /**
    * Returns norm squared.
    */
   __device__
-  inline double norm2( void ) const {
+  inline float norm2( void ) const {
     return x*x + y*y;
   }
 
@@ -128,19 +128,19 @@ class Vector2D {
 
 // left scalar multiplication
 __device__
-inline Vector2D operator*( double r, const Vector2D& v ) {
+inline Vector2D operator*( float r, const Vector2D& v ) {
    return v*r;
 }
 
 // inner product
 __device__
-inline double dot( const Vector2D& v1, const Vector2D& v2 ) {
+inline float dot( const Vector2D& v1, const Vector2D& v2 ) {
   return v1.x*v2.x + v1.y*v2.y;
 }
 
 // cross product
 __device__
-inline double cross( const Vector2D& v1, const Vector2D& v2 ) {
+inline float cross( const Vector2D& v1, const Vector2D& v2 ) {
   return v1.x*v2.y - v1.y*v2.x;
 }
 

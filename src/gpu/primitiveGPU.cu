@@ -17,7 +17,7 @@ PrimitiveGPU::PrimitiveGPU(CMU462::Vector3D p1, CMU462::Vector3D p2,
   this->bsdf = bsdf;
 }
 
-PrimitiveGPU::PrimitiveGPU(CMU462::Vector3D o, double r, BSDF *bsdf)
+PrimitiveGPU::PrimitiveGPU(CMU462::Vector3D o, float r, BSDF *bsdf)
 {
   this->type = SPHERE;
   this->o = Vector3D(o);
@@ -63,13 +63,13 @@ bool PrimitiveGPU::intersect(Ray& r, Intersection* i)
 __device__
 BBox PrimitiveGPU::triangleGetBBox()
 {
-  Vector3D min(fmin(p1.x, fmin(p2.x, p3.x)),
-               fmin(p1.y, fmin(p2.y, p3.y)),
-               fmin(p1.z, fmin(p2.z, p3.z)));
+  Vector3D min(fminf(p1.x, fminf(p2.x, p3.x)),
+               fminf(p1.y, fminf(p2.y, p3.y)),
+               fminf(p1.z, fminf(p2.z, p3.z)));
 
-  Vector3D max(fmax(p1.x, fmax(p2.x, p3.x)),
-               fmax(p1.y, fmax(p2.y, p3.y)),
-               fmax(p1.z, fmax(p2.z, p3.z)));
+  Vector3D max(fmaxf(p1.x, fmaxf(p2.x, p3.x)),
+               fmaxf(p1.y, fmaxf(p2.y, p3.y)),
+               fmaxf(p1.z, fmaxf(p2.z, p3.z)));
 
   return BBox(min, max);
 }
@@ -87,9 +87,9 @@ bool PrimitiveGPU::triangleIntersect(Ray& r, Intersection* i)
   Vector3D e2 = p3 - p1;
   Vector3D s = r.o - p1;
   Vector3D c1 = cross(e1, r.d), c2 = cross(e2, s);
-  double denom = dot(c1, e2);
-  double u = dot(c2, r.d) / denom, v = dot(c1, s) / denom;
-  double t = dot(c2,e1) / denom;
+  float denom = dot(c1, e2);
+  float u = dot(c2, r.d) / denom, v = dot(c1, s) / denom;
+  float t = dot(c2,e1) / denom;
 
   if (r.min_t <= t && t <= r.max_t && u >=0 && v >= 0 &&  (u + v) <= 1) {
     r.max_t = t;
@@ -106,13 +106,13 @@ bool PrimitiveGPU::triangleIntersect(Ray& r, Intersection* i)
 }
 
 __device__
-bool PrimitiveGPU::test(Ray& r, double& t1, double& t2) const {
+bool PrimitiveGPU::test(Ray& r, float& t1, float& t2) const {
   Vector3D l = r.o - o;
-  double disc = pow(dot(l, r.d), 2.) - dot(r.d, r.d) * (dot(l, l) - r2);
+  float disc = powf(dot(l, r.d), 2.) - dot(r.d, r.d) * (dot(l, l) - r2);
   if (disc < 0) return false;
 
-  t1 = (-dot(l, r.d) - sqrt(disc)) / dot(r.d, r.d);
-  t2 = (-dot(l, r.d) + sqrt(disc)) / dot(r.d, r.d);
+  t1 = (-dot(l, r.d) - sqrtf(disc)) / dot(r.d, r.d);
+  t2 = (-dot(l, r.d) + sqrtf(disc)) / dot(r.d, r.d);
   return true;
 }
 
@@ -120,7 +120,7 @@ bool PrimitiveGPU::test(Ray& r, double& t1, double& t2) const {
 __device__
 bool PrimitiveGPU::sphereIntersect(Ray& r, Intersection* i)
 {
-  double t1, t2;
+  float t1, t2;
   if (!test(r, t1, t2)) return false;
   if (r.min_t <= t1 && t1 <= r.max_t) {
     r.max_t = t1;

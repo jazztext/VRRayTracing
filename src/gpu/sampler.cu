@@ -10,22 +10,22 @@ Vector2D UniformGridSampler2D::get_sample(curandState *state) const {
 
   // TODO:
   // Implement uniform 2D grid sampler
-  return Vector2D(curand_uniform_double(state), curand_uniform_double(state));
+  return Vector2D(curand_uniform(state), curand_uniform(state));
 }
 
 // Uniform Hemisphere Sampler3D Implementation //
 __device__
 Vector3D UniformHemisphereSampler3D::get_sample(curandState *state) const {
 
-  double Xi1 = curand_uniform_double(state);
-  double Xi2 = curand_uniform_double(state);
+  float Xi1 = curand_uniform(state);
+  float Xi2 = curand_uniform(state);
 
-  double theta = acos(Xi1);
-  double phi = 2.0 * PI * Xi2;
+  float theta = acos(Xi1);
+  float phi = 2.0 * PI * Xi2;
 
-  double xs = sinf(theta) * cosf(phi);
-  double ys = sinf(theta) * sinf(phi);
-  double zs = cosf(theta);
+  float xs = sinf(theta) * cosf(phi);
+  float ys = sinf(theta) * sinf(phi);
+  float zs = cosf(theta);
 
   return Vector3D(xs, ys, zs);
 
@@ -43,9 +43,9 @@ Vector3D CosineWeightedHemisphereSampler3D::get_sample(curandState *state,
                                                        float *pdf) const {
   // You may implement this, but don't have to.
   float z1 = curand_uniform(state), z2 = curand_uniform(state);
-  float theta = 2 * PI * z1, r = sqrt(z2), z = sqrt(1 - r*r);
+  float theta = 2 * PI * z1, r = sqrtf(z2), z = sqrtf(1 - r*r);
   *pdf = z / PI;
-  return Vector3D(r * cos(theta), r * sin(theta), z);
+  return Vector3D(r * cosf(theta), r * sinf(theta), z);
 }
 
 

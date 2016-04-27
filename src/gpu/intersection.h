@@ -19,7 +19,7 @@ struct Intersection {
   __device__
   Intersection() : t (infy()), primitive(NULL), bsdf(NULL) { }
 
-  double t;    ///< time of intersection
+  float t;    ///< time of intersection
 
   const PrimitiveGPU* primitive;  ///< the primitive intersected
 

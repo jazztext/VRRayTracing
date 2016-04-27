@@ -7,7 +7,7 @@ namespace VRRT {
 
 #ifdef __CUDACC__ //nvcc
 
-static const double PI = 3.14159;
+static const float PI = 3.14159;
 
 #define DEBUG
 
@@ -25,9 +25,6 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 #define cudaCheckError(ans) ans
 #endif
 
-
-//#define __STRICT_ANSI__ //solves problems with __float128, unsupported by nvcc
-
 #else //gcc
 #define __host__
 #define __device__
@@ -35,12 +32,12 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 #endif
 
 __device__
-static inline double infy()
+static inline float infy()
 {
   #ifdef __CUDACC__
-  return __longlong_as_double(0x7ff0000000000000);
+  return __int_as_float(0x7f800000);
   #else
-  return INF_D;
+  return INF_F;
   #endif
 }
 

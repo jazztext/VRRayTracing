@@ -31,7 +31,7 @@ class Matrix3x3 {
   // Transposes to the internal column major form.
   // REQUIRES: data should be of size 9 for a 3 by 3 matrix..
   __device__
-  Matrix3x3(double * data)
+  Matrix3x3(float * data)
   {
     for( int i = 0; i < 3; i++ ) {
       for( int j = 0; j < 3; j++ ) {
@@ -45,19 +45,19 @@ class Matrix3x3 {
    * Sets all elements to val.
    */
   __device__
-  void zero(double val = 0.0 );
+  void zero(float val = 0.0 );
 
   /**
    * Returns the determinant of A.
    */
   __device__
-  double det( void ) const;
+  float det( void ) const;
 
   /**
    * Returns the Frobenius norm of A.
    */
   __device__
-  double norm( void ) const;
+  float norm( void ) const;
 
   /**
    * Returns the 3x3 identity matrix.
@@ -93,9 +93,9 @@ class Matrix3x3 {
 
   // accesses element (i,j) of A using 0-based indexing
   __device__
-        double& operator()( int i, int j );
+        float& operator()( int i, int j );
   __device__
-  const double& operator()( int i, int j ) const;
+  const float& operator()( int i, int j ) const;
 
   // accesses the ith column of A
   __device__
@@ -117,7 +117,7 @@ class Matrix3x3 {
 
   // returns c*A
   __device__
-  Matrix3x3 operator*( double c ) const;
+  Matrix3x3 operator*( float c ) const;
 
   // returns A*B
   __device__
@@ -129,7 +129,7 @@ class Matrix3x3 {
 
   // divides each element by x
   __device__
-  void operator/=( double x );
+  void operator/=( float x );
 
   protected:
 
@@ -144,7 +144,7 @@ Matrix3x3 outer( const Vector3D& u, const Vector3D& v );
 
 // returns c*A
 __device__
-Matrix3x3 operator*( double c, const Matrix3x3& A );
+Matrix3x3 operator*( float c, const Matrix3x3& A );
 
 } // namespace CMU462
 

@@ -72,8 +72,8 @@ bool BVHGPU::intersectNode(BVHNodeGPU *node, Ray& ray, Intersection *i) const
     }
     return hit;
   }
-  double minTL = ray.min_t, minTR = ray.min_t;
-  double maxTL = ray.max_t, maxTR = ray.max_t;
+  float minTL = ray.min_t, minTR = ray.min_t;
+  float maxTL = ray.max_t, maxTR = ray.max_t;
   bool hitLeft = node->l->bb.intersect(ray, minTL, maxTL);
   bool hitRight = node->r->bb.intersect(ray, minTR, maxTR);
   BVHNodeGPU *first, *second;

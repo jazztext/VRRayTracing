@@ -29,7 +29,7 @@ class Matrix4x4 {
   // Transposes to the internal column major form.
   // REQUIRES: data should be of size 16.
   __device__
-  Matrix4x4(double * data)
+  Matrix4x4(float * data)
   {
     for( int i = 0; i < 4; i++ )
     for( int j = 0; j < 4; j++ )
@@ -45,19 +45,19 @@ class Matrix4x4 {
    * Sets all elements to val.
    */
   __device__
-  void zero(double val = 0.0);
+  void zero(float val = 0.0);
 
   /**
    * Returns the determinant of A.
    */
   __device__
-  double det( void ) const;
+  float det( void ) const;
 
   /**
    * Returns the Frobenius norm of A.
    */
   __device__
-  double norm( void ) const;
+  float norm( void ) const;
 
   /**
    * Returns a fresh 4x4 identity matrix.
@@ -90,9 +90,9 @@ class Matrix4x4 {
   // accesses element (i,j) of A using 0-based indexing
   // where (i, j) is (row, column).
   __device__
-        double& operator()( int i, int j );
+        float& operator()( int i, int j );
   __device__
-  const double& operator()( int i, int j ) const;
+  const float& operator()( int i, int j ) const;
 
   // accesses the ith column of A
   __device__
@@ -114,7 +114,7 @@ class Matrix4x4 {
 
   // returns c*A
   __device__
-  Matrix4x4 operator*( double c ) const;
+  Matrix4x4 operator*( float c ) const;
 
   // returns A*B
   __device__
@@ -126,7 +126,7 @@ class Matrix4x4 {
 
   // divides each element by x
   __device__
-  void operator/=( double x );
+  void operator/=( float x );
 
   protected:
 
@@ -141,7 +141,7 @@ Matrix4x4 outer( const Vector4D& u, const Vector4D& v );
 
 // returns c*A
 __device__
-Matrix4x4 operator*( double c, const Matrix4x4& A );
+Matrix4x4 operator*( float c, const Matrix4x4& A );
 
 } // namespace CMU462
 

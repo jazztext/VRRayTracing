@@ -6,12 +6,12 @@
 namespace VRRT {
 
 __device__
-double& Matrix3x3::operator()( int i, int j ) {
+float& Matrix3x3::operator()( int i, int j ) {
   return entries[j][i];
 }
 
 __device__
-const double& Matrix3x3::operator()( int i, int j ) const {
+const float& Matrix3x3::operator()( int i, int j ) const {
   return entries[j][i];
 }
 
@@ -26,13 +26,13 @@ const Vector3D& Matrix3x3::operator[]( int j ) const {
 }
 
 __device__
-void Matrix3x3::zero( double val ) {
+void Matrix3x3::zero( float val ) {
   // sets all elements to val
   entries[0] = entries[1] = entries[2] = Vector3D( val, val, val );
 }
 
 __device__
-double Matrix3x3::det( void ) const {
+float Matrix3x3::det( void ) const {
   const Matrix3x3& A( *this );
 
   return -A(0,2)*A(1,1)*A(2,0) + A(0,1)*A(1,2)*A(2,0) +
@@ -41,10 +41,10 @@ double Matrix3x3::det( void ) const {
 }
 
 __device__
-double Matrix3x3::norm( void ) const {
-  return sqrt( entries[0].norm2() +
-               entries[1].norm2() +
-               entries[2].norm2() );
+float Matrix3x3::norm( void ) const {
+  return sqrtf( entries[0].norm2() +
+                entries[1].norm2() +
+                entries[2].norm2() );
 }
 
 __device__
@@ -65,8 +65,8 @@ __device__
 void Matrix3x3::operator+=( const Matrix3x3& B ) {
 
   Matrix3x3& A( *this );
-  double* Aij = (double*) &A;
-  const double* Bij = (const double*) &B;
+  float* Aij = (float*) &A;
+  const float* Bij = (const float*) &B;
 
   *Aij++ += *Bij++;
   *Aij++ += *Bij++;
@@ -94,7 +94,7 @@ Matrix3x3 Matrix3x3::operator-( const Matrix3x3& B ) const {
 }
 
 __device__
-Matrix3x3 Matrix3x3::operator*( double c ) const {
+Matrix3x3 Matrix3x3::operator*( float c ) const {
   const Matrix3x3& A( *this );
   Matrix3x3 B;
 
@@ -108,11 +108,11 @@ Matrix3x3 Matrix3x3::operator*( double c ) const {
 }
 
 __device__
-Matrix3x3 operator*( double c, const Matrix3x3& A ) {
+Matrix3x3 operator*( float c, const Matrix3x3& A ) {
 
   Matrix3x3 cA;
-  const double* Aij = (const double*) &A;
-  double* cAij = (double*) &cA;
+  const float* Aij = (const float*) &A;
+  float* cAij = (float*) &cA;
 
   *cAij++ = c * (*Aij++);
   *cAij++ = c * (*Aij++);
@@ -182,9 +182,9 @@ Matrix3x3 Matrix3x3::inv( void ) const {
 }
 
 __device__
-void Matrix3x3::operator/=( double x ) {
+void Matrix3x3::operator/=( float x ) {
   Matrix3x3& A( *this );
-  double rx = 1./x;
+  float rx = 1./x;
 
   for( int i = 0; i < 3; i++ )
   for( int j = 0; j < 3; j++ )
@@ -218,7 +218,7 @@ Matrix3x3 Matrix3x3::crossProduct( const Vector3D& u ) {
 __device__
 Matrix3x3 outer( const Vector3D& u, const Vector3D& v ) {
   Matrix3x3 B;
-  double* Bij = (double*) &B;
+  float* Bij = (float*) &B;
 
   *Bij++ = u.x*v.x;
   *Bij++ = u.y*v.x;

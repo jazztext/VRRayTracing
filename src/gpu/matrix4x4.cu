@@ -5,12 +5,12 @@ using namespace std;
 namespace VRRT {
 
   __device__
-  double& Matrix4x4::operator()( int i, int j ) {
+  float& Matrix4x4::operator()( int i, int j ) {
     return entries[j][i];
   }
 
   __device__
-  const double& Matrix4x4::operator()( int i, int j ) const {
+  const float& Matrix4x4::operator()( int i, int j ) const {
     return entries[j][i];
   }
 
@@ -25,7 +25,7 @@ namespace VRRT {
   }
 
   __device__
-  void Matrix4x4::zero( double val ) {
+  void Matrix4x4::zero( float val ) {
     // sets all elements to val
     entries[0] =
 	  entries[1] =
@@ -34,7 +34,7 @@ namespace VRRT {
   }
 
   __device__
-  double Matrix4x4::det( void ) const {
+  float Matrix4x4::det( void ) const {
     const Matrix4x4& A( *this );
 
 	return
@@ -54,11 +54,11 @@ namespace VRRT {
   }
 
   __device__
-  double Matrix4x4::norm( void ) const {
-    return sqrt( entries[0].norm2() +
-                 entries[1].norm2() +
-                 entries[2].norm2() +
-				         entries[3].norm2());
+  float Matrix4x4::norm( void ) const {
+    return sqrtf( entries[0].norm2() +
+                  entries[1].norm2() +
+                  entries[2].norm2() +
+				          entries[3].norm2());
   }
 
   __device__
@@ -80,10 +80,10 @@ namespace VRRT {
   void Matrix4x4::operator+=( const Matrix4x4& B ) {
 
     Matrix4x4& A( *this );
-    double* Aij = (double*) &A;
-    const double* Bij = (const double*) &B;
+    float* Aij = (float*) &A;
+    const float* Bij = (const float*) &B;
 
-	// Add the 16 contigous vector packed double values.
+	// Add the 16 contigous vector packed float values.
     *Aij++ += *Bij++;//0
     *Aij++ += *Bij++;
     *Aij++ += *Bij++;
@@ -119,7 +119,7 @@ namespace VRRT {
   }
 
   __device__
-  Matrix4x4 Matrix4x4::operator*( double c ) const {
+  Matrix4x4 Matrix4x4::operator*( float c ) const {
     const Matrix4x4& A( *this );
     Matrix4x4 B;
 
@@ -134,11 +134,11 @@ namespace VRRT {
 
   // Returns c*A.
   __device__
-  Matrix4x4 operator*( double c, const Matrix4x4& A ) {
+  Matrix4x4 operator*( float c, const Matrix4x4& A ) {
 
     Matrix4x4 cA;
-    const double* Aij = (const double*) &A;
-    double* cAij = (double*) &cA;
+    const float* Aij = (const float*) &A;
+    float* cAij = (float*) &cA;
 
     *cAij++ = c * (*Aij++);//0
     *cAij++ = c * (*Aij++);
@@ -235,9 +235,9 @@ namespace VRRT {
   }
 
   __device__
-  void Matrix4x4::operator/=( double x ) {
+  void Matrix4x4::operator/=( float x ) {
     Matrix4x4& A( *this );
-    double rx = 1./x;
+    float rx = 1./x;
 
     for( int i = 0; i < 4; i++ )
     for( int j = 0; j < 4; j++ )

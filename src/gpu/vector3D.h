@@ -14,28 +14,28 @@ class Vector3D {
  public:
 
   // components
-  double x, y, z;
+  float x, y, z;
 
   /**
    * Constructor.
    * Initializes tp vector (0,0,0).
    */
   __device__
-  Vector3D() : x( 0.0 ), y( 0.0 ), z( 0.0 ) { }
+  Vector3D() : x( 0.f ), y( 0.f ), z( 0.f ) { }
 
   /**
    * Constructor.
    * Initializes to vector (x,y,z).
    */
   __device__
-  Vector3D( double x, double y, double z) : x( x ), y( y ), z( z ) { }
+  Vector3D( float x, float y, float z) : x( x ), y( y ), z( z ) { }
 
   /**
    * Constructor.
    * Initializes to vector (c,c,c)
    */
   __device__
-  Vector3D( double c ) : x( c ), y( c ), z( c ) { }
+  Vector3D( float c ) : x( c ), y( c ), z( c ) { }
 
   /**
    * Constructor.
@@ -49,13 +49,13 @@ class Vector3D {
 
   // returns reference to the specified component (0-based indexing: x, y, z)
   __device__
-  inline double& operator[] ( const int& index ) {
+  inline float& operator[] ( const int& index ) {
     return ( &x )[ index ];
   }
 
   // returns const reference to the specified component (0-based indexing: x, y, z)
   __device__
-  inline const double& operator[] ( const int& index ) const {
+  inline const float& operator[] ( const int& index ) const {
     return ( &x )[ index ];
   }
 
@@ -84,14 +84,14 @@ class Vector3D {
 
   // right scalar multiplication
   __device__
-  inline Vector3D operator*( const double& c ) const {
+  inline Vector3D operator*( const float& c ) const {
     return Vector3D( x * c, y * c, z * c );
   }
 
   // scalar division
   __device__
-  inline Vector3D operator/( const double& c ) const {
-    const double rc = 1.0/c;
+  inline Vector3D operator/( const float& c ) const {
+    const float rc = 1.0/c;
     return Vector3D( rc * x, rc * y, rc * z );
   }
 
@@ -109,13 +109,13 @@ class Vector3D {
 
   // scalar multiplication / assignment
   __device__
-  inline void operator*=( const double& c ) {
+  inline void operator*=( const float& c ) {
     x *= c; y *= c; z *= c;
   }
 
   // scalar division / assignment
   __device__
-  inline void operator/=( const double& c ) {
+  inline void operator/=( const float& c ) {
     (*this) *= ( 1./c );
   }
 
@@ -123,15 +123,15 @@ class Vector3D {
    * Returns Euclidean length.
    */
   __device__
-  inline double norm( void ) const {
-    return sqrt( x*x + y*y + z*z );
+  inline float norm( void ) const {
+    return sqrtf( x*x + y*y + z*z );
   }
 
   /**
    * Returns Euclidean length squared.
    */
   __device__
-  inline double norm2( void ) const {
+  inline float norm2( void ) const {
     return x*x + y*y + z*z;
   }
 
@@ -140,7 +140,7 @@ class Vector3D {
    */
   __device__
   inline Vector3D unit( void ) const {
-    double rNorm = 1. / sqrt( x*x + y*y + z*z );
+    float rNorm = 1. / sqrtf( x*x + y*y + z*z );
     return Vector3D( rNorm*x, rNorm*y, rNorm*z );
   }
 
@@ -156,13 +156,13 @@ class Vector3D {
 
 // left scalar multiplication
 __device__
-inline Vector3D operator* ( const double& c, const Vector3D& v ) {
+inline Vector3D operator* ( const float& c, const Vector3D& v ) {
   return Vector3D( c * v.x, c * v.y, c * v.z );
 }
 
 // dot product (a.k.a. inner or scalar product)
 __device__
-inline double dot( const Vector3D& u, const Vector3D& v ) {
+inline float dot( const Vector3D& u, const Vector3D& v ) {
   return u.x*v.x + u.y*v.y + u.z*v.z ;
 }
 

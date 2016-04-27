@@ -9,6 +9,7 @@
 #include "light.h"
 #include "../bvh.h"
 #include "../camera.h"
+#include "../cycleTimer.h"
 
 #include "CMU462/lodepng.h"
 #include <stdio.h>
@@ -58,14 +59,6 @@ __device__ Spectrum trace_ray(Ray &r,
   Vector3D w_out = w2o * (r.o - hit_p);
   w_out.normalize();
 
-  // TODO:
-  // extend the below code to compute the direct lighting for all the lights
-  // in the scene, instead of just the dummy light we provided in part 1.
-
-  //InfiniteHemisphereLight light(Spectrum(5.f, 5.f, 5.f));
-  //DirectionalLight light(Spectrum(5.f, 5.f, 5.f),
-  //                                            Vector3D(1.0, -1.0, 0.0));
-
   Vector3D dir_to_light;
   float dist_to_light;
   float pdf;
@@ -75,33 +68,24 @@ __device__ Spectrum trace_ray(Ray &r,
     int num_light_samples = light->is_delta_light() ? 1 : ns_area_light;
 
     // integrate light over the hemisphere about the normal
-    double scale = 1.0 / num_light_samples;
+    float scale = 1.f / num_light_samples;
     for (int i=0; i<num_light_samples; i++) {
 
       // returns a vector 'dir_to_light' that is a direction from
       // point hit_p to the point on the light source.  It also returns
       // the distance from point x to this point on the light source.
-      // (pdf is the probability of randomly selecting the random
-      // sample point on the light source -- more on this in part 2)
       Spectrum light_L = light->sample_L(hit_p, &dir_to_light, &dist_to_light, &pdf, state);
 
       // convert direction into coordinate space of the surface, where
       // the surface normal is [0 0 1]
       Vector3D w_in = w2o * dir_to_light;
 
-      // note that computing dot(n,w_in) is simple
-      // in surface coordinates since the normal is [0 0 1]
-      double cos_theta = fmax(0.0, w_in[2]);
+      float cos_theta = fmaxf(0.f, w_in[2]);
 
       // evaluate surface bsdf
       Spectrum f = isect.bsdf->f(w_out, w_in);
 
-      // TODO:
-      // construct a shadow ray and compute whether the intersected surface is
-      // in shadow and accumulate reflected radiance
-      Ray shadow = Ray(hit_p + EPS_D*dir_to_light, dir_to_light);
-      //Intersection inters;
-      //inters.t = dist_to_light;
+      Ray shadow = Ray(hit_p + .0001f*dir_to_light, dir_to_light);
       Intersection shadowIsect;
       if (!bvh->intersect(shadow, &shadowIsect) ||
           shadowIsect.t > dist_to_light)
@@ -117,10 +101,10 @@ __device__ Spectrum trace_ray(Ray &r,
   Spectrum s = isect.bsdf->sample_f(w_out, &w_i, &pdf2, inMaterial, state);
   w_i = w2o.inv() * w_i;
   w_i.normalize();
-  double killP = 1.f - s.illum();
+  float killP = 1.f - s.illum();
   killP = clamp(killP, 0.0f, 1.0f);
   if (UniformGridSampler2D().get_sample(state).x < killP) return L_out;
-  Ray newR = Ray(hit_p + EPS_D*w_i, w_i);
+  Ray newR = Ray(hit_p + EPS_F*w_i, w_i);
   newR.depth = r.depth + 1;
   newR.min_t = 0.0;
   newR.max_t = infy();
@@ -230,23 +214,38 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   cudaCheckError( cudaGetLastError() );
   cudaCheckError( cudaDeviceSynchronize() );
 
+  std::cout << "Constructing BVH and transfer to GPU... ";
+  fflush(stdout);
+  float start = CycleTimer::currentSeconds();
   //construct bvh on GPU
   BVHGPU bvhGPU(bvh);
+  float end = CycleTimer::currentSeconds();
+  std::cout << "Done! (" << end - start << " sec)\n";
 
   //copy lights over to GPU
+  std::cout << "Copying Lights to GPU... ";
+  fflush(stdout);
+  start = CycleTimer::currentSeconds();
   SceneLight **lights;
   cudaCheckError( cudaMalloc(&lights, sizeof(SceneLight *) * scene->lights.size()) );
   for (int i = 0; i < scene->lights.size(); i++) {
     scene->lights[i]->copyToDev(lights + i);
   }
+  end = CycleTimer::currentSeconds();
+  std::cout << "Done! (" << end - start << " sec)\n";
 
   //raytrace scene
+  std::cout << "Raytracing scene... ";
+  fflush(stdout);
+  start = CycleTimer::currentSeconds();
   raytrace_pixel<<<gridDim, blockDim>>>(outBuffer, *c, lights,
                                         scene->lights.size(), bvhGPU, screenH,
                                         screenW, ns_aa, ns_area_light,
                                         max_ray_depth, state);
   cudaCheckError( cudaGetLastError() );
   cudaCheckError( cudaDeviceSynchronize() );
+  end = CycleTimer::currentSeconds();
+  std::cout << "Done! (" << end - start << " sec)\n";
 
   //copy image into CPU buffer
   cudaCheckError( cudaMemcpy(frame_out, outBuffer, 4*screenW*screenH, cudaMemcpyDeviceToHost) );

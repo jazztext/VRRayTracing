@@ -182,10 +182,10 @@ Spectrum AreaLight::sample_L(const Vector3D& p, Vector3D* wi,
   Vector3D d = position + sample.x * dim_x + sample.y * dim_y - p;
   float cosTheta = dot(d, direction);
   float sqDist = d.norm2();
-  float dist = sqrt(sqDist);
+  float dist = sqrtf(sqDist);
   *wi = d / dist;
-  *distToLight = dist;
-  *pdf = sqDist / (area * fabs(cosTheta));
+  *distToLight = dist - .01;
+  *pdf = sqDist / (area * fabsf(cosTheta));
   return cosTheta < 0 ? radiance : Spectrum();
 };
 

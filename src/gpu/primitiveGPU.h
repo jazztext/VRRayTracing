@@ -17,7 +17,7 @@ class PrimitiveGPU {
                CMU462::Vector3D n1, CMU462::Vector3D n2, CMU462::Vector3D n3,
                BSDF *bsdf);
 
-  PrimitiveGPU(CMU462::Vector3D o, double r, BSDF *bsdf);
+  PrimitiveGPU(CMU462::Vector3D o, float r, BSDF *bsdf);
 
   /**
    * Get the world space bounding box of the primitive.
@@ -54,7 +54,7 @@ class PrimitiveGPU {
   __device__ BBox triangleGetBBox();
   __device__ BBox sphereGetBBox();
   __device__ bool triangleIntersect(Ray& r, Intersection* i);
-  __device__ bool test(Ray& r, double& t1, double& t2) const;
+  __device__ bool test(Ray& r, float& t1, float& t2) const;
   __device__ bool sphereIntersect(Ray& r, Intersection* i);
 
   enum {TRI, SPHERE};
@@ -63,8 +63,8 @@ class PrimitiveGPU {
   Vector3D p1, p2, p3; //traingle points
   Vector3D n1, n2, n3; //triangle normals
   Vector3D o; ///< origin of the sphere
-  double r;   ///< radius
-  double r2;  ///< radius squared
+  float r;   ///< radius
+  float r2;  ///< radius squared
   BSDF *bsdf;
 
 

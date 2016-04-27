@@ -52,8 +52,8 @@ struct BBox {
    * Creates a bounding box with given bounds (component wise).
    */
   __device__
-  BBox(const double minX, const double minY, const double minZ,
-       const double maxX, const double maxY, const double maxZ) {
+  BBox(const float minX, const float minY, const float minZ,
+       const float maxX, const float maxY, const float maxZ) {
     min = Vector3D(minX, minY, minZ);
     max = Vector3D(maxX, maxY, maxZ);
 		extent = max - min;
@@ -105,7 +105,7 @@ struct BBox {
    * \return surface area of the bounding box.
    */
   __device__
-  double surface_area() const {
+  float surface_area() const {
     if (empty()) return 0.0;
     return 2 * (extent.x * extent.z +
                 extent.x * extent.y +
@@ -132,7 +132,7 @@ struct BBox {
    * \param t1 upper bound of intersection time
    */
   __device__
-  bool intersect(Ray& r, double& t0, double& t1) const;
+  bool intersect(Ray& r, float& t0, float& t1) const;
 
 };
 
