@@ -20,7 +20,7 @@ namespace VRRT {
 struct BVHNodeGPU {
 
   BVHNodeGPU(CMU462::BBox bb, size_t start, size_t range)
-      : start(start), range(range), l(NULL), r(NULL)
+      : start(start), range(range), l(NULL), r(NULL), minT(0)
   {
     this->bb.max.x = bb.max.x;
     this->bb.max.y = bb.max.y;
@@ -41,6 +41,7 @@ struct BVHNodeGPU {
   size_t range;   ///< range of index into the primitive list
   BVHNodeGPU* l;     ///< left child node
   BVHNodeGPU* r;     ///< right child node
+  float minT;
 };
 
 class BVHGPU {
@@ -92,6 +93,7 @@ class BVHGPU {
 
  private:
   BVHNodeGPU *nodes; ///< root node of the BVH
+  int numNodes;
   PrimitiveGPU *primitives;
 };
 

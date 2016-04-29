@@ -9,9 +9,9 @@ namespace VRRT {
 
 static const float PI = 3.14159;
 
-#define DEBUG
+//#define DEBUG_
 
-#ifdef DEBUG
+#ifdef DEBUG_
 #define cudaCheckError(ans) { cudaAssert((ans), __FILE__, __LINE__); }
 inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {

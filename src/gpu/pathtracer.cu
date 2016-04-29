@@ -17,6 +17,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
+#include <cuda_profiler_api.h>
 
 
 namespace VRRT {
@@ -29,21 +30,24 @@ __device__ inline unsigned char colorToChar(float c)
   else return (unsigned char) c;
 }
 
-__device__ Spectrum trace_ray(Ray &r,
+__device__ Spectrum trace_ray(Ray r,
                               SceneLight **lights,
                               int numLights,
                               BVHGPU *bvh, int ns_area_light, int max_ray_depth,
                               curandState *state, bool includeLe = false) {
+  Spectrum total,  multiplier(1, 1, 1);
+  while (1) {
 
+  if (r.depth > max_ray_depth) return total;
   Intersection isect;
   //check for intersection
   if (!bvh->intersect(r, &isect)) {
-    return Spectrum(0,0,0);
+    return total;
     // Environment lighting goes here...
   }
 
   //initialize L_out with emission from intersected material, if applicable
-  Spectrum L_out = (includeLe) ? isect.bsdf->get_emission() : Spectrum();
+  Spectrum L_out = includeLe ? isect.bsdf->get_emission() : Spectrum();
 
   Vector3D hit_p = r.o + r.d * isect.t;
   Vector3D hit_n = isect.n;
@@ -93,7 +97,7 @@ __device__ Spectrum trace_ray(Ray &r,
     }
   }
 
-  if (r.depth > max_ray_depth) return Spectrum();
+  total += multiplier * L_out;
 
   Vector3D w_i;
   float pdf2;
@@ -103,15 +107,17 @@ __device__ Spectrum trace_ray(Ray &r,
   w_i.normalize();
   float killP = 1.f - s.illum();
   killP = clamp(killP, 0.0f, 1.0f);
-  if (UniformGridSampler2D().get_sample(state).x < killP) return L_out;
+  if (UniformGridSampler2D().get_sample(state).x < killP) return total;
   Ray newR = Ray(hit_p + EPS_F*w_i, w_i);
   newR.depth = r.depth + 1;
   newR.min_t = 0.0;
   newR.max_t = infy();
   newR.inMaterial = inMaterial;
-  Spectrum indirect = trace_ray(newR, lights, numLights, bvh, ns_area_light,
-                                max_ray_depth, state, isect.bsdf->is_delta());
-  return L_out + (s * indirect * (fabs(dot(w_i, hit_n))  / (pdf2 * (1 - killP))));
+  multiplier *= s * (fabsf(dot(w_i, hit_n)) / (pdf2 * (1 - killP)));
+  r = newR;
+  includeLe = isect.bsdf->is_delta();
+  */
+  }
 }
 
 __global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c,
@@ -132,8 +138,8 @@ __global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c,
     for (int i = 0; i < ns_aa; i++) {
       Vector2D p = gridSampler.get_sample(&localState);
       Ray r = c.generate_ray((x + p.x) / w, (y + p.y) / h);
-      total += trace_ray(r, lights, numLights, &bvh, ns_area_light,
-                         max_ray_depth, &localState, true);
+      //total += trace_ray(r, lights, numLights, &bvh, ns_area_light,
+      //                   max_ray_depth, &localState, true);
     }
     total *= (1.0 / ns_aa);
   } else {
@@ -237,6 +243,7 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   //raytrace scene
   std::cout << "Raytracing scene... ";
   fflush(stdout);
+  cudaProfilerStart();
   start = CycleTimer::currentSeconds();
   raytrace_pixel<<<gridDim, blockDim>>>(outBuffer, *c, lights,
                                         scene->lights.size(), bvhGPU, screenH,
@@ -245,6 +252,7 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   cudaCheckError( cudaGetLastError() );
   cudaCheckError( cudaDeviceSynchronize() );
   end = CycleTimer::currentSeconds();
+  cudaProfilerStop();
   std::cout << "Done! (" << end - start << " sec)\n";
 
   //copy image into CPU buffer
@@ -262,6 +270,7 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   //  cudaFree(cpuLights[i]);
   //}
   cudaFree(lights);
+  cudaDeviceReset();
 }
 
 }

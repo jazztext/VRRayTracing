@@ -1,6 +1,7 @@
 #include "bvhGPU.h"
 #include <iostream>
 #include <unordered_map>
+#include <thrust/device_vector.h>
 
 namespace VRRT {
 
@@ -36,6 +37,7 @@ BVHGPU::BVHGPU(CMU462::StaticScene::BVHAccel *bvh)
   cudaCheckError( cudaMalloc(&nodes, sizeof(BVHNodeGPU) * flatNodes.size()) );
   cudaCheckError( cudaMemcpy(nodes, flatNodes.data(), sizeof(BVHNodeGPU) * flatNodes.size(),
              cudaMemcpyHostToDevice) );
+  numNodes = flatNodes.size();
 }
 
 BVHGPU::~BVHGPU() {
@@ -62,32 +64,55 @@ bool BVHGPU::intersect(Ray &ray) const {
 
 }
 
+__device__ inline void pushStack(BVHNodeGPU *node, BVHNodeGPU **stack, int &top)
+{
+  stack[top] = node;
+  top++;
+}
+
+__device__ inline BVHNodeGPU *popStack(BVHNodeGPU **stack, int &top)
+{
+  return stack[--top];
+}
+
 __device__
 bool BVHGPU::intersectNode(BVHNodeGPU *node, Ray& ray, Intersection *i) const
 {
-  if (node->isLeaf()) {
-    bool hit = false;
-    for (int n = node->start; n < node->start + node->range; n++) {
-      if (primitives[n].intersect(ray, i)) hit = true;
-    }
-    return hit;
-  }
-  float minTL = ray.min_t, minTR = ray.min_t;
-  float maxTL = ray.max_t, maxTR = ray.max_t;
-  bool hitLeft = node->l->bb.intersect(ray, minTL, maxTL);
-  bool hitRight = node->r->bb.intersect(ray, minTR, maxTR);
-  BVHNodeGPU *first, *second;
-  bool hitFirst, hitSecond;
-  if (minTL < minTR) {
-    first = node->l; second = node->r; hitFirst = hitLeft; hitSecond = hitRight;
-  }
-  else {
-    first = node->r; second = node->l; hitFirst = hitRight; hitSecond = hitLeft;
-  }
+  BVHNodeGPU *waiting[50];
+  int top = 0;
+  node->minT = 0;
+  pushStack(node, waiting, top);
   bool hit = false;
-  if (hitFirst && intersectNode(first, ray, i)) hit = true;
-  if (hitSecond && minTR < ray.max_t && intersectNode(second, ray, i))
-    hit = true;
+  while (top > 0) {
+    node = popStack(waiting, top);
+    if (node->minT >= ray.max_t) continue;
+    if (node->isLeaf()) {
+      for (int n = node->start; n < node->start + node->range; n++) {
+        if (primitives[n].intersect(ray, i)) hit = true;
+      }
+      continue;
+    }
+    float minTL = ray.min_t, minTR = ray.min_t;
+    float maxTL = ray.max_t, maxTR = ray.max_t;
+    bool hitLeft = node->l->bb.intersect(ray, minTL, maxTL);
+    bool hitRight = node->r->bb.intersect(ray, minTR, maxTR);
+    BVHNodeGPU *first, *second;
+    bool hitFirst, hitSecond;
+    if (minTL < minTR) {
+      first = node->l; second = node->r; hitFirst = hitLeft; hitSecond = hitRight;
+    }
+    else {
+      first = node->r; second = node->l; hitFirst = hitRight; hitSecond = hitLeft;
+    }
+    if (hitFirst) {
+      first->minT = minTL;
+      pushStack(first, waiting, top);
+    }
+    if (hitSecond) {
+      second->minT = minTR;
+      pushStack(second, waiting, top);
+    }
+  }
   return hit;
 }
 

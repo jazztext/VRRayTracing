@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 find_package(CUDA QUIET REQUIRED)
 
-option(BUILD_DEBUG     "Build with debug settings"    ON)
+option(BUILD_DEBUG     "Build with debug settings"    OFF)
 
 set(CUDA_NVCC_FLAGS
    ${CUDA_NVCC_FLAGS};
