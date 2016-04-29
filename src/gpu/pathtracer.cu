@@ -31,11 +31,11 @@ __device__ inline unsigned char colorToChar(float c)
 }
 
 __device__ Spectrum trace_ray(Ray r,
-                              SceneLight **lights,
+                              SceneLight *lights,
                               int numLights,
                               BVHGPU *bvh, int ns_area_light, int max_ray_depth,
                               curandState *state, bool includeLe = false) {
-  Spectrum total,  multiplier(1, 1, 1);
+  Spectrum total, multiplier(1, 1, 1);
   while (1) {
 
   if (r.depth > max_ray_depth) return total;
@@ -68,8 +68,8 @@ __device__ Spectrum trace_ray(Ray r,
   float pdf;
 
   for (int n = 0; n < numLights; n++) {
-    SceneLight *light = lights[n];
-    int num_light_samples = light->is_delta_light() ? 1 : ns_area_light;
+    SceneLight &light = lights[n];
+    int num_light_samples = light.is_delta_light() ? 1 : ns_area_light;
 
     // integrate light over the hemisphere about the normal
     float scale = 1.f / num_light_samples;
@@ -78,7 +78,7 @@ __device__ Spectrum trace_ray(Ray r,
       // returns a vector 'dir_to_light' that is a direction from
       // point hit_p to the point on the light source.  It also returns
       // the distance from point x to this point on the light source.
-      Spectrum light_L = light->sample_L(hit_p, &dir_to_light, &dist_to_light, &pdf, state);
+      Spectrum light_L = light.sample_L(hit_p, &dir_to_light, &dist_to_light, &pdf, state);
 
       // convert direction into coordinate space of the surface, where
       // the surface normal is [0 0 1]
@@ -116,12 +116,11 @@ __device__ Spectrum trace_ray(Ray r,
   multiplier *= s * (fabsf(dot(w_i, hit_n)) / (pdf2 * (1 - killP)));
   r = newR;
   includeLe = isect.bsdf->is_delta();
-  */
   }
 }
 
 __global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c,
-                               SceneLight **lights,
+                               SceneLight *lights,
                                int numLights, BVHGPU bvh, int h, int w,
                                int ns_aa, int ns_area_light, int max_ray_depth,
                                curandState *state)
@@ -138,8 +137,8 @@ __global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c,
     for (int i = 0; i < ns_aa; i++) {
       Vector2D p = gridSampler.get_sample(&localState);
       Ray r = c.generate_ray((x + p.x) / w, (y + p.y) / h);
-      //total += trace_ray(r, lights, numLights, &bvh, ns_area_light,
-      //                   max_ray_depth, &localState, true);
+      total += trace_ray(r, lights, numLights, &bvh, ns_area_light,
+                         max_ray_depth, &localState, true);
     }
     total *= (1.0 / ns_aa);
   } else {
@@ -232,11 +231,12 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   std::cout << "Copying Lights to GPU... ";
   fflush(stdout);
   start = CycleTimer::currentSeconds();
-  SceneLight **lights;
-  cudaCheckError( cudaMalloc(&lights, sizeof(SceneLight *) * scene->lights.size()) );
-  for (int i = 0; i < scene->lights.size(); i++) {
-    scene->lights[i]->copyToDev(lights + i);
-  }
+  SceneLight *lights;
+  cudaCheckError( cudaMalloc(&lights, sizeof(SceneLight) * scene->lights.size()) );
+  cudaCheckError( cudaMemcpy(lights, scene->lights.data(),
+                             sizeof(SceneLight) * scene->lights.size(),
+                             cudaMemcpyHostToDevice) );
+
   end = CycleTimer::currentSeconds();
   std::cout << "Done! (" << end - start << " sec)\n";
 

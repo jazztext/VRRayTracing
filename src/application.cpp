@@ -57,7 +57,7 @@ string Application::info() {
 void Application::load(SceneInfo* sceneInfo) {
 
   vector<Collada::Node>& nodes = sceneInfo->nodes;
-  vector<VRRT::SceneLight *> lights;
+  vector<VRRT::SceneLight> lights;
   vector<StaticScene::SceneObject *> objects;
 
   // save camera position to update camera control later
@@ -144,18 +144,19 @@ void Application::reset_camera() {
   camera.copy_placement(canonicalCamera);
 }
 
-VRRT::SceneLight *Application::init_light(LightInfo& light,
-                                                 const Matrix4x4& transform) {
+VRRT::SceneLight Application::init_light(LightInfo& light,
+                                         const Matrix4x4& transform) {
   Vector3D position, direction, dim_x, dim_y, dim_xT, dim_yT;
   switch(light.light_type) {
     case Collada::LightType::NONE:
       break;
     case Collada::LightType::AMBIENT:
-      return new VRRT::InfiniteHemisphereLight(light.spectrum);
+      return VRRT::SceneLight(light.spectrum, VRRT::SceneLight::HEMISPHERE);
     case Collada::LightType::DIRECTIONAL:
       direction = -(transform * Vector4D(light.direction, 1)).to3D();
       direction.normalize();
-      return new VRRT::DirectionalLight(light.spectrum, direction);
+      return VRRT::SceneLight(light.spectrum, direction,
+                              VRRT::SceneLight::DIRECTIONAL);
     case Collada::LightType::AREA:
       position = (transform * Vector4D(light.position, 1)).to3D();
       direction = (transform * Vector4D(light.direction, 1)).to3D() - position;
@@ -167,20 +168,21 @@ VRRT::SceneLight *Application::init_light(LightInfo& light,
       dim_xT = (transform * Vector4D(dim_x, 1)).to3D() - position;
       dim_yT = (transform * Vector4D(dim_y, 1)).to3D() - position;
 
-      return new VRRT::AreaLight(light.spectrum, position, direction,
-                                 dim_xT, dim_yT);
+      return VRRT::SceneLight(light.spectrum, position, direction,
+                              dim_xT, dim_yT, VRRT::SceneLight::AREA);
     case Collada::LightType::POINT:
       position = (transform * Vector4D(light.position, 1)).to3D();
-      return new VRRT::PointLight(light.spectrum, direction);
+      return VRRT::SceneLight(light.spectrum, direction,
+                              VRRT::SceneLight::POINT);
     case Collada::LightType::SPOT:
       position = (transform * Vector4D(light.position, 1)).to3D();
       direction = (transform * Vector4D(light.direction, 1)).to3D() - position;
       direction.normalize();
-      return new VRRT::SpotLight(light.spectrum, position, direction, PI * .5f);
+      break; //could add support for spotlight if desired
     default:
       break;
   }
-  return nullptr;
+  return VRRT::SceneLight();
 }
 
 /**
@@ -198,7 +200,7 @@ StaticScene::SceneObject *Application::init_sphere(SphereInfo& sphere,
   if (sphere.material) {
     bsdf = sphere.material->bsdf;
   } else {
-    bsdf = new VRRT::DiffuseBSDF(Spectrum(0.5f,0.5f,0.5f));
+    bsdf = new VRRT::BSDF(Spectrum(0.5f,0.5f,0.5f), VRRT::BSDF::DIFFUSE);
   }
   return new StaticScene::SphereObject(position, sphere.radius * scale, bsdf);
 }
@@ -220,7 +222,7 @@ StaticScene::SceneObject *Application::init_polymesh(PolymeshInfo& polymesh,
   if (polymesh.material) {
     bsdf = polymesh.material->bsdf;
   } else {
-    bsdf = new VRRT::DiffuseBSDF(Spectrum(0.5f,0.5f,0.5f));
+    bsdf = new VRRT::BSDF(Spectrum(0.5f,0.5f,0.5f), VRRT::BSDF::DIFFUSE);
   }
 
   return new StaticScene::Mesh(mesh, bsdf);

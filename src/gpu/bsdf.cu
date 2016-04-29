@@ -21,143 +21,78 @@ void make_coord_space(Matrix3x3& o2w, const Vector3D& n) {
     o2w[0] = x;
     o2w[1] = y;
     o2w[2] = z;
-}
 
-// Diffuse BSDF //
-
-__device__
-Spectrum DiffuseBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return albedo * (1.f / PI);
 }
 
 __device__
-Spectrum DiffuseBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
-                               bool& inMat, curandState *state) {
-  inMat = false;
-  *wi = sampler.get_sample(state, pdf);
-  return f(wo, *wi);
-}
-
-__global__ void copyDiffuseBSDF(Spectrum a, BSDF **dest)
+Spectrum BSDF::f(const Vector3D& wo, const Vector3D& wi)
 {
-  *dest = new DiffuseBSDF(a);
+  switch (t) {
+    case DIFFUSE:
+      return color * (1.f / PI);
+    default:
+      return Spectrum();
+  }
+}
+
+__device__
+Spectrum BSDF::sample_f (const Vector3D& wo, Vector3D* wi, float* pdf,
+                         bool& inMat, curandState *state)
+{
+  switch (t) {
+    case MIRROR:
+      inMat = false;
+      reflect(wo, wi);
+      *pdf = 1;
+      return color * (1 / wo.z);
+    case GLASS:
+      return glassSample(wo, wi, pdf, inMat, state);
+    default:
+      inMat = false;
+      *wi = sampler.get_sample(state, pdf);
+      return f(wo, *wi);
+  }
+}
+
+__device__
+Spectrum BSDF::get_emission()
+{
+  switch (t) {
+    case EMISSION:
+      return color * (1.0 / PI);
+    default:
+      return Spectrum();
+  }
+}
+
+__device__
+bool BSDF::is_delta()
+{
+  switch (t) {
+    case MIRROR:
+    case GLASS:
+      return true;
+    default:
+      return false;
+  }
+
 }
 
 __host__
-BSDF *DiffuseBSDF::copyToDev()
+BSDF *BSDF::copyToDev()
 {
-  BSDF **location;
-  cudaCheckError( cudaMalloc(&location, sizeof(BSDF *)) );
-  copyDiffuseBSDF<<<1, 1>>>(albedo, location);
-  cudaCheckError( cudaGetLastError() );
-  cudaCheckError( cudaDeviceSynchronize() );
-  BSDF *devLoc;
-  cudaMemcpy(&devLoc, location, sizeof(BSDF *), cudaMemcpyDeviceToHost);
-  return devLoc;
-}
-
-
-// Mirror BSDF //
-
-__device__
-Spectrum MirrorBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return Spectrum(0, 0, 0);
+  BSDF *location;
+  cudaCheckError( cudaMalloc(&location, sizeof(BSDF)) );
+  cudaCheckError( cudaMemcpy(location, this, sizeof(BSDF),
+                             cudaMemcpyHostToDevice) );
+  return location;
 }
 
 __device__
-Spectrum MirrorBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
-                              bool& inMat, curandState *state) {
+Spectrum BSDF::glassSample(const Vector3D& wo, Vector3D* wi, float* pdf,
+                           bool& inMat, curandState *state) {
 
-  // TODO:
-  // Implement MirrorBSDF
-  inMat = false;
-  reflect(wo, wi);
-  *pdf = 1;
-  return reflectance * (1 / wo.z);
-}
-
-__global__ void copyMirrorBSDF(MirrorBSDF bsdf, BSDF **dest)
-{
-  *dest = new MirrorBSDF(bsdf);
-}
-
-__host__
-BSDF *MirrorBSDF::copyToDev()
-{
-  BSDF **location;
-  cudaCheckError( cudaMalloc(&location, sizeof(BSDF *)) );
-  copyMirrorBSDF<<<1, 1>>>(*this, location);
-  cudaCheckError( cudaGetLastError() );
-  cudaCheckError( cudaDeviceSynchronize() );
-  BSDF *devLoc;
-  cudaMemcpy(&devLoc, location, sizeof(BSDF *), cudaMemcpyDeviceToHost);
-  return devLoc;
-}
-
-
-// Glossy BSDF //
-
-/*
-Spectrum GlossyBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return Spectrum();
-}
-
-Spectrum GlossyBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf) {
-  *pdf = 1.0f;
-  return reflect(wo, wi, reflectance);
-}
-*/
-
-// Refraction BSDF //
-
-__device__
-Spectrum RefractionBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return Spectrum();
-}
-
-__device__
-Spectrum RefractionBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
-                                  bool& inMat, curandState *state) {
-
-  // TODO:
-  // Implement RefractionBSDF
-
-  return Spectrum();
-}
-
-__global__ void copyRefractionBSDF(RefractionBSDF bsdf, BSDF **dest)
-{
-  *dest = new RefractionBSDF(bsdf);
-}
-
-__host__
-BSDF *RefractionBSDF::copyToDev()
-{
-  BSDF **location;
-  cudaCheckError( cudaMalloc(&location, sizeof(BSDF *)) );
-  copyRefractionBSDF<<<1, 1>>>(*this, location);
-  cudaCheckError( cudaGetLastError() );
-  cudaCheckError( cudaDeviceSynchronize() );
-  BSDF *devLoc;
-  cudaMemcpy(&devLoc, location, sizeof(BSDF *), cudaMemcpyDeviceToHost);
-  return devLoc;
-}
-
-
-// Glass BSDF //
-
-__device__
-Spectrum GlassBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return Spectrum();
-}
-
-__device__
-Spectrum GlassBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
-                             bool& inMat, curandState *state) {
-
-  // TODO:
   // Compute Fresnel coefficient and either reflect or refract based on it.
-
   float ni, nt;
   if (inMat) {
     ni = ior;
@@ -176,21 +111,19 @@ Spectrum GlassBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
   if (tir || curand_uniform(state) < fr) { //reflect
     reflect(wo, wi);
     *pdf = 1;
-    return reflectance * (1 / fabs(wo.z));
+    return color2 * (1 / fabs(wo.z));
   }
   else { //refract
     *wi = transmit;
     *pdf = 1;
     inMat = !inMat;
-    return transmittance * powf(ni / nt, 2) * (1 / (fabsf(cosThetaI)));
+    return color * powf(ni / nt, 2) * (1 / (fabsf(cosThetaI)));
   }
 }
-
 
 __device__
 void BSDF::reflect(const Vector3D& wo, Vector3D* wi) {
 
-  // TODO:
   // Implement reflection of wo about normal (0,0,1) and store result in wi.
   *wi = wo;
   wi->x *= -1;
@@ -201,7 +134,6 @@ void BSDF::reflect(const Vector3D& wo, Vector3D* wi) {
 __device__
 bool BSDF::refract(const Vector3D& wo, Vector3D* wi, float ior, bool inMat) {
 
-  // TODO:
   // Use Snell's Law to refract wo surface and store result ray in wi.
   // Return false if refraction does not occur due to total internal reflection
   // and true otherwise. When dot(wo,n) is positive, then wo corresponds to a
@@ -225,59 +157,5 @@ bool BSDF::refract(const Vector3D& wo, Vector3D* wi, float ior, bool inMat) {
   return true;
 
 }
-
-__global__ void copyGlassBSDF(GlassBSDF bsdf, BSDF **dest)
-{
-  *dest = new GlassBSDF(bsdf);
-}
-
-__host__
-BSDF *GlassBSDF::copyToDev()
-{
-  BSDF **location;
-  cudaCheckError( cudaMalloc(&location, sizeof(BSDF *)) );
-  copyGlassBSDF<<<1, 1>>>(*this, location);
-  cudaCheckError( cudaGetLastError() );
-  cudaCheckError( cudaDeviceSynchronize() );
-  BSDF *devLoc;
-  cudaMemcpy(&devLoc, location, sizeof(BSDF *), cudaMemcpyDeviceToHost);
-  return devLoc;
-}
-
-
-// Emission BSDF //
-
-__device__
-Spectrum EmissionBSDF::f(const Vector3D& wo, const Vector3D& wi) {
-  return Spectrum();
-}
-
-__device__
-Spectrum EmissionBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf,
-                                bool& inMat, curandState *state) {
-  inMat = false;
-  *wi  = sampler.get_sample(state, pdf);
-  return Spectrum();
-}
-
-__global__ void copyEmissionBSDF(EmissionBSDF bsdf, BSDF **dest)
-{
-  *dest = new EmissionBSDF(bsdf);
-  Spectrum r = (*dest)->get_emission();
-}
-
-__host__
-BSDF *EmissionBSDF::copyToDev()
-{
-  BSDF **location;
-  cudaCheckError( cudaMalloc(&location, sizeof(BSDF *)) );
-  copyEmissionBSDF<<<1, 1>>>(*this, location);
-  cudaCheckError( cudaGetLastError() );
-  cudaCheckError( cudaDeviceSynchronize() );
-  BSDF *devLoc;
-  cudaMemcpy(&devLoc, location, sizeof(BSDF *), cudaMemcpyDeviceToHost);
-  return devLoc;
-}
-
 
 } // namespace CMU462

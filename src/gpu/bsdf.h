@@ -9,6 +9,7 @@
 #include "sampler.h"
 
 #include <curand_kernel.h>
+#include <iostream>
 
 namespace VRRT {
 
@@ -53,6 +54,23 @@ __device__ void make_coord_space(Matrix3x3& o2w, const Vector3D& n);
  */
 class BSDF {
  public:
+   enum BSDFType { DIFFUSE, MIRROR, GLASS, EMISSION };
+
+  __host__
+  BSDF(const CMU462::Spectrum& c, BSDFType t) : color(c), t(t)
+  {
+    if (t != DIFFUSE && t != MIRROR && t != EMISSION)
+      std::cout << "BSDF construction error\n";
+  }
+  __host__
+  BSDF(const CMU462::Spectrum& transmittance, const Spectrum& reflectance,
+       float roughness, float ior, BSDFType t) :
+    color(transmittance), color2(reflectance), roughness(roughness), ior(ior),
+    t(t)
+  {
+    if (t != GLASS) std::cout << "BSDF construction error\n";
+  }
+
 
   /**
    * Evaluate BSDF.
@@ -64,7 +82,7 @@ class BSDF {
    * \return reflectance in the given incident/outgoing directions
    */
   __device__
-  virtual Spectrum f (const Vector3D& wo, const Vector3D& wi) = 0;
+  Spectrum f (const Vector3D& wo, const Vector3D& wi);
 
   /**
    * Evaluate BSDF.
@@ -78,8 +96,12 @@ class BSDF {
    * \return reflectance in the output incident and given outgoing directions
    */
   __device__
-  virtual Spectrum sample_f (const Vector3D& wo, Vector3D* wi, float* pdf,
-                             bool& inMat, curandState *state) = 0;
+  Spectrum sample_f (const Vector3D& wo, Vector3D* wi, float* pdf,
+                     bool& inMat, curandState *state);
+
+  __device__
+  Spectrum glassSample(const Vector3D& wo, Vector3D* wi, float* pdf,
+                       bool& inMat, curandState *state);
 
   /**
    * Get the emission value of the surface material. For non-emitting surfaces
@@ -87,7 +109,7 @@ class BSDF {
    * \return emission spectrum of the surface material
    */
   __device__
-  virtual Spectrum get_emission () const = 0;
+  Spectrum get_emission ();
 
   /**
    * If the BSDF is a delta distribution. Materials that are perfectly specular,
@@ -97,216 +119,33 @@ class BSDF {
    * scattered.
    */
   __device__
-  virtual bool is_delta() const = 0;
+  bool is_delta();
 
   /**
    * Reflection helper
    */
   __device__
-  virtual void reflect(const Vector3D& wo, Vector3D* wi);
+  void reflect(const Vector3D& wo, Vector3D* wi);
 
   /**
    * Refraction helper
    */
   __device__
-  virtual bool refract(const Vector3D& wo, Vector3D* wi, float ior, bool inMat);
+  bool refract(const Vector3D& wo, Vector3D* wi, float ior, bool inMat);
 
   __host__
-  virtual BSDF *copyToDev() =0;
+  BSDF *copyToDev();
+
+ private:
+  BSDFType t;
+  Spectrum color, color2; //can be albedo, reflectance, transmittance, etc.
+  CosineWeightedHemisphereSampler3D sampler;
+  float roughness;
+  float ior;
+
 
 }; // class BSDF
 
-/**
- * Diffuse BSDF.
- */
-class DiffuseBSDF : public BSDF {
- public:
-
-  __host__
-  DiffuseBSDF(const CMU462::Spectrum& a) : albedo(a) { }
-  __device__
-  DiffuseBSDF(const Spectrum& a) : albedo(a) { }
-
-  __device__
-  Spectrum f(const Vector3D& wo, const Vector3D& wi);
-  __device__
-  Spectrum sample_f(const Vector3D& wo, Vector3D* wi, float* pdf, bool& inMat,
-                    curandState *state);
-  __device__
-  Spectrum get_emission() const { return Spectrum(); }
-  __device__
-  bool is_delta() const { return false; }
-
-  __host__
-  BSDF *copyToDev();
-
-private:
-
-  Spectrum albedo;
-  CosineWeightedHemisphereSampler3D sampler;
-
-}; // class DiffuseBSDF
-
-/**
- * Mirror BSDF
- */
-class MirrorBSDF : public BSDF {
- public:
-
-  __host__
-  MirrorBSDF(const CMU462::Spectrum& reflectance) : reflectance(reflectance) { }
-  __device__
-  MirrorBSDF(const MirrorBSDF& bsdf) : reflectance(bsdf.reflectance) { }
-
-  __device__
-  Spectrum f(const Vector3D& wo, const Vector3D& wi);
-  __device__
-  Spectrum sample_f(const Vector3D& wo, Vector3D* wi, float* pdf, bool& inMat,
-                    curandState *state);
-  __device__
-  Spectrum get_emission() const { return Spectrum(); }
-  __device__
-  bool is_delta() const { return true; }
-
-  __host__
-  BSDF *copyToDev();
-
-
-private:
-
-  float roughness;
-  Spectrum reflectance;
-
-}; // class MirrorBSDF*/
-
-/**
- * Glossy BSDF.
- */
-/*
-class GlossyBSDF : public BSDF {
- public:
-
-  GlossyBSDF(const Spectrum& reflectance, float roughness)
-    : reflectance(reflectance), roughness(roughness) { }
-
-  Spectrum f(const Vector3D& wo, const Vector3D& wi);
-  Spectrum sample_f(const Vector3D& wo, Vector3D* wi, float* pdf);
-  Spectrum get_emission() const { return Spectrum(); }
-  bool is_delta() const { return false; }
-
-private:
-
-  float roughness;
-  Spectrum reflectance;
-
-}; // class GlossyBSDF*/
-
-/**
- * Refraction BSDF.
- */
-class RefractionBSDF : public BSDF {
- public:
-
-  __host__
-  RefractionBSDF(const CMU462::Spectrum& transmittance, float roughness,
-                 float ior)
-    : transmittance(transmittance), roughness(roughness), ior(ior) { }
-  __device__
-  RefractionBSDF(const RefractionBSDF& bsdf) : transmittance(bsdf.transmittance) ,
-    roughness(bsdf.roughness), ior(bsdf.ior) { }
-
-  __device__
-  Spectrum f(const Vector3D& wo, const Vector3D& wi);
-  __device__
-  Spectrum sample_f(const Vector3D& wo, Vector3D* wi, float* pdf, bool& inMat,
-                    curandState *state);
-  __device__
-  Spectrum get_emission() const { return Spectrum(); }
-  __device__
-  bool is_delta() const { return true; }
-
-  __host__
-  BSDF *copyToDev();
-
-
- private:
-
-  float ior;
-  float roughness;
-  Spectrum transmittance;
-
-}; // class RefractionBSDF
-
-/**
- * Glass BSDF.
- */
-class GlassBSDF : public BSDF {
- public:
-
-  __host__
-  GlassBSDF(const CMU462::Spectrum& transmittance, const Spectrum& reflectance,
-            float roughness, float ior) :
-    transmittance(transmittance), reflectance(reflectance),
-    roughness(roughness), ior(ior) { }
-  __device__
-  GlassBSDF(const GlassBSDF& bsdf) : transmittance(bsdf.transmittance),
-    reflectance(bsdf.reflectance), roughness(bsdf.roughness), ior(bsdf.ior) { }
-
-  __device__
-  Spectrum f(const Vector3D& wo, const Vector3D& wi);
-  __device__
-  Spectrum sample_f(const Vector3D& wo, Vector3D* wi, float* pdf, bool& inMat,
-                    curandState *state);
-  __device__
-  Spectrum get_emission() const { return Spectrum(); }
-  __device__
-  bool is_delta() const { return true; }
-
-  __host__
-  BSDF *copyToDev();
-
-
- private:
-
-  float ior;
-  float roughness;
-  Spectrum reflectance;
-  Spectrum transmittance;
-
-}; // class GlassBSDF
-
-/**
- * Emission BSDF.
- */
-class EmissionBSDF : public BSDF {
- public:
-
-  __host__
-  EmissionBSDF(const CMU462::Spectrum& radiance) : radiance(radiance) { }
-  __device__
-  EmissionBSDF(const EmissionBSDF& bsdf) : radiance(bsdf.radiance) { }
-
-  __device__
-  Spectrum f(const Vector3D& wo, const Vector3D& wi);
-  __device__
-  Spectrum sample_f(const Vector3D& wo, Vector3D* wi, float* pdf, bool& inMat,
-                    curandState *state);
-  __device__
-  Spectrum get_emission() const { return radiance * (1.0 / PI); }
-  __device__
-  bool is_delta() const { return false; }
-
-  __host__
-  BSDF *copyToDev();
-
-
- private:
-
-  Spectrum radiance;
-  CosineWeightedHemisphereSampler3D sampler;
-
-}; // class EmissionBSDF
-
-}  // namespace CMU462
+}  // namespace VRRT
 
 #endif  // CMU462_STATICSCENE_BSDF_H

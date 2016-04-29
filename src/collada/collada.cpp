@@ -14,11 +14,6 @@
 
 using namespace std;
 using VRRT::BSDF;
-using VRRT::EmissionBSDF;
-using VRRT::MirrorBSDF;
-using VRRT::RefractionBSDF;
-using VRRT::GlassBSDF;
-using VRRT::DiffuseBSDF;
 
 
 namespace CMU462 {
@@ -881,12 +876,12 @@ void ColladaParser::parse_material ( XMLElement* xml, MaterialInfo& material ) {
         if (type == "emission") {
           XMLElement *e_radiance  = get_element(e_bsdf, "radiance");
           Spectrum radiance = spectrum_from_string(string(e_radiance->GetText()));
-          BSDF* bsdf = new EmissionBSDF(radiance);
+          BSDF* bsdf = new BSDF(radiance, VRRT::BSDF::EMISSION);
           material.bsdf = bsdf;
         } else if (type == "mirror") {
           XMLElement *e_reflectance  = get_element(e_bsdf, "reflectance");
           Spectrum reflectance = spectrum_from_string(string(e_reflectance->GetText()));
-          BSDF* bsdf = new MirrorBSDF(reflectance);
+          BSDF* bsdf = new BSDF(reflectance, VRRT::BSDF::MIRROR);
           material.bsdf = bsdf;
         /*
         if (type == "glossy") {
@@ -897,6 +892,7 @@ void ColladaParser::parse_material ( XMLElement* xml, MaterialInfo& material ) {
           BSDF* bsdf = new GlossyBSDF(reflectance, roughness);
           material.bsdf = bsdf;
         */
+          /*
         } else if (type == "refraction") {
           XMLElement *e_transmittance  = get_element(e_bsdf, "transmittance");
           XMLElement *e_roughness = get_element(e_bsdf, "roughness");
@@ -906,6 +902,7 @@ void ColladaParser::parse_material ( XMLElement* xml, MaterialInfo& material ) {
           float ior = atof(e_ior->GetText());
           BSDF* bsdf = new RefractionBSDF(transmittance, roughness, ior);
           material.bsdf = bsdf;
+          */
         } else if (type == "glass") {
           XMLElement *e_transmittance  = get_element(e_bsdf, "transmittance");
           XMLElement *e_reflectance  = get_element(e_bsdf, "reflectance");
@@ -915,7 +912,7 @@ void ColladaParser::parse_material ( XMLElement* xml, MaterialInfo& material ) {
           Spectrum reflectance = spectrum_from_string(string(e_reflectance->GetText()));
           float roughness = atof(e_roughness->GetText());
           float ior = atof(e_ior->GetText());
-          BSDF* bsdf = new GlassBSDF(transmittance, reflectance, roughness, ior);
+          BSDF* bsdf = new BSDF(transmittance, reflectance, roughness, ior, VRRT::BSDF::GLASS);
           material.bsdf = bsdf;
         }
 
@@ -925,12 +922,13 @@ void ColladaParser::parse_material ( XMLElement* xml, MaterialInfo& material ) {
       XMLElement* e_diffuse = get_element(tech_common, "phong/diffuse/color");
       if (e_diffuse) {
         Spectrum albedo = spectrum_from_string(string(e_diffuse->GetText()));
-        material.bsdf = new DiffuseBSDF(albedo);
+        material.bsdf = new BSDF(albedo, VRRT::BSDF::DIFFUSE);
       } else {
-        material.bsdf = new DiffuseBSDF(Spectrum(.5f,.5f,.5f));
+        material.bsdf = new BSDF(Spectrum(.5f,.5f,.5f),
+                                        VRRT::BSDF::DIFFUSE);
       }
     } else {
-      BSDF* bsdf = new DiffuseBSDF(Spectrum(.5f,.5f,.5f));
+      BSDF* bsdf = new BSDF(Spectrum(.5f,.5f,.5f), VRRT::BSDF::DIFFUSE);
       material.bsdf = bsdf;
     }
   } else {

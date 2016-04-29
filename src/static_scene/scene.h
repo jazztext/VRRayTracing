@@ -39,7 +39,7 @@ class SceneObject {
  */
 struct Scene {
   Scene(const std::vector<SceneObject *>& objects,
-        const std::vector<VRRT::SceneLight *>& lights)
+        const std::vector<VRRT::SceneLight>& lights)
     : objects(objects), lights(lights) { }
 
   // kept to make sure they don't get deleted, in case the
@@ -47,7 +47,7 @@ struct Scene {
   std::vector<SceneObject*> objects;
 
   // for sake of consistency of the scene object Interface
-  std::vector<VRRT::SceneLight*> lights;
+  std::vector<VRRT::SceneLight> lights;
 
   // TODO (sky) :
   // Adding object with emission BSDFs as mesh lights and sphere lights so

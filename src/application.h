@@ -103,7 +103,7 @@ class Application {
   Matrix4x4 get_world_to_3DH();
 
   void init_camera(Collada::CameraInfo& camera, const Matrix4x4& transform);
-  VRRT::SceneLight *init_light(Collada::LightInfo& light, const Matrix4x4& transform);
+  VRRT::SceneLight init_light(Collada::LightInfo& light, const Matrix4x4& transform);
   StaticScene::SceneObject *init_sphere(Collada::SphereInfo& polymesh, const Matrix4x4& transform);
   StaticScene::SceneObject *init_polymesh(Collada::PolymeshInfo& polymesh, const Matrix4x4& transform);
   void init_material(Collada::MaterialInfo& material);
