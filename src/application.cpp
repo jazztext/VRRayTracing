@@ -1,5 +1,6 @@
 #include "application.h"
 #include "gpu/pathtracer.h"
+#include "gpu/rayBenchmark.h"
 
 using Collada::CameraInfo;
 using Collada::LightInfo;
@@ -230,6 +231,18 @@ StaticScene::SceneObject *Application::init_polymesh(PolymeshInfo& polymesh,
 
 void Application::init_material(MaterialInfo& material) {
   // TODO : Support Materials.
+}
+
+void Application::benchmark(int numRays)
+{
+  vector<StaticScene::Primitive *> primitives;
+  for (StaticScene::SceneObject *obj : scene->objects) {
+    const vector<StaticScene::Primitive *> &obj_prims = obj->get_primitives();
+    primitives.reserve(primitives.size() + obj_prims.size());
+    primitives.insert(primitives.end(), obj_prims.begin(), obj_prims.end());
+  }
+  StaticScene::BVHAccel *bvh = new StaticScene::BVHAccel(primitives, 4);
+  VRRT::benchmark(bvh, numRays);
 }
 
 void Application::pathtrace() {

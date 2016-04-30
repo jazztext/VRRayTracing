@@ -76,6 +76,8 @@ class Application {
 
   void load(Collada::SceneInfo* sceneInfo);
   void pathtrace();
+  void benchmark(int numRays);
+
 
  private:
 

@@ -76,15 +76,16 @@ __device__ inline BVHNodeGPU *popStack(BVHNodeGPU **stack, int &top)
 }
 
 __device__
-bool BVHGPU::intersectNode(BVHNodeGPU *node, Ray& ray, Intersection *i) const
+bool BVHGPU::intersect(Ray &ray, Intersection *i) const
 {
-  BVHNodeGPU *waiting[50];
+  BVHNodeGPU *node = nodes;
+  BVHNodeGPU *stack[50];
   int top = 0;
   node->minT = 0;
-  pushStack(node, waiting, top);
+  pushStack(node, stack, top);
   bool hit = false;
   while (top > 0) {
-    node = popStack(waiting, top);
+    node = popStack(stack, top);
     if (node->minT >= ray.max_t) continue;
     if (node->isLeaf()) {
       for (int n = node->start; n < node->start + node->range; n++) {
@@ -106,29 +107,14 @@ bool BVHGPU::intersectNode(BVHNodeGPU *node, Ray& ray, Intersection *i) const
     }
     if (hitFirst) {
       first->minT = minTL;
-      pushStack(first, waiting, top);
+      pushStack(first, stack, top);
     }
     if (hitSecond) {
       second->minT = minTR;
-      pushStack(second, waiting, top);
+      pushStack(second, stack, top);
     }
   }
   return hit;
-}
-
-__device__
-bool BVHGPU::intersect(Ray &ray, Intersection *i) const {
-
-  // TODO:
-  // Implement ray - bvh aggregate intersection test. A ray intersects
-  // with a BVH aggregate if and only if it intersects a primitive in
-  // the BVH that is not an aggregate. When an intersection does happen.
-  // You should store the non-aggregate primitive in the intersection data
-  // and not the BVH aggregate itself.
-
-  bool returnVal = intersectNode(&nodes[0], ray, i);
-  return returnVal;
-
 }
 
 }

@@ -35,7 +35,8 @@ __device__
 static inline float infy()
 {
   #ifdef __CUDACC__
-  return __int_as_float(0x7f800000);
+  //return __int_as_float(0x7f800000);
+  return 1e15;
   #else
   return INF_F;
   #endif

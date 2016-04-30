@@ -61,9 +61,6 @@ class BVHGPU {
   __device__
   BBox get_bbox() const;
 
-  __device__
-  bool intersectNode(BVHNodeGPU *node, Ray& ray, Intersection *i) const;
-
   /**
    * Ray - Aggregate intersection.
    * Check if the given ray intersects with the aggregate (any primitive in

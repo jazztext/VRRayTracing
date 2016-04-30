@@ -45,7 +45,11 @@ struct BBox {
    */
   __device__
   BBox(const Vector3D& min, const Vector3D& max) :
-       min(min), max(max) { extent = max - min; }
+       min(min), max(max), extent(max - min) { }
+
+  __host__
+  BBox(const CMU462::Vector3D& min, const CMU462::Vector3D& max) :
+       min(min), max(max), extent(max - min) { }
 
   /**
    * Constructor.

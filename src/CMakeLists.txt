@@ -11,7 +11,7 @@ set(CUDA_NVCC_FLAGS
 if (BUILD_DEBUG)
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -g -G)
 else (BUILD_DEBUG)
-  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3)
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3 -lineinfo)
 endif(BUILD_DEBUG)
 
 set(CUDA_SEPARABLE_COMPILATION ON)
@@ -52,6 +52,7 @@ set(APPLICATION_SOURCE
     gpu/vector4D.cu
     gpu/sampler.cu
     gpu/light.cu
+    gpu/rayBenchmark.cu
 
     # Application
     application.cpp
