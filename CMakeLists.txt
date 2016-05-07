@@ -30,6 +30,12 @@ ADD_DEFINITIONS( -DPROJECT_NAME="${PROJECT_NAME}" )
 MESSAGE( "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}" )
 FIND_PACKAGE(CUDA QUIET REQUIRED)
 
+set(CUDA_NVCC_FLAGS
+   ${CUDA_NVCC_FLAGS};
+   -std=c++11
+)
+
+
 #
 # Platform-dependent section
 #
@@ -229,7 +235,7 @@ ELSEIF( UNIX )
 
     ADD_DEFINITIONS( -D_DEBUG )
     SET(CMAKE_CXX_FLAGS "-ggdb --std=c++11")
-    SET(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-ggdb --std=c++11")
 
     SET( GLM_ROOT "${LIBS_HOME}/glm-0.9.5.4/glm" CACHE STRING "glm root" )
     INCLUDE_DIRECTORIES( "${GLM_ROOT}" )
@@ -274,9 +280,9 @@ ELSEIF( UNIX )
     find_package(OpenGL REQUIRED)
     include_directories( ${OPENGL_INCLUDE_DIRS} )
 
-    include_directories( src/VRRayTracing/src )
-    include_directories( src/VRRayTracing/CMU462/include )
-    link_directories( src )
+    include_directories( src/pathtracer/src )
+    include_directories( src/pathtracer/CMU462/include )
+    link_directories( ${PROJECT_SOURCE_DIR} )
 
     SET( PLATFORM_LIBS
         ${OVR_LIBS}

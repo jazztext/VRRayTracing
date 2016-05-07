@@ -49,17 +49,17 @@ public:
     dim3 blockDim, gridDim;
     curandState *state;
     int stateSize;
- 
+
     int eye;
     int eye_w, eye_h;
     int image_w, image_h;
     GLuint outFbo;
 
     VRRT::SceneLight *lights;
- 
+
     cudaArray_t devRenderbuffer[2];
     unsigned char *devOutput;
-  
+
     VRRT::BVHGPU bvh;
 
 

@@ -78,9 +78,6 @@ class Application {
   void pathtrace(char *fname);
   void benchmark(int numRays);
 
-
- private:
-
   StaticScene::Scene *scene;
 
   // View Frustrum Variables.

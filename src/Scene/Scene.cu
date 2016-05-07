@@ -49,6 +49,8 @@
 #define SCALE 1
 #endif
 
+extern __constant__ VRRT::constantParams cuGlobals;
+
 inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=true) {
   if (code != cudaSuccess) {
     fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(code), file, line);
@@ -75,17 +77,31 @@ void Scene::initCuda() {
     primitives.insert(primitives.end(), obj_prims.begin(), obj_prims.end());
   }
   CMU462::StaticScene::BVHAccel *cpuBVH = new CMU462::StaticScene::BVHAccel(primitives, 4);
-  bvh = VRRT::BVHGPU(cpuBVH);
+  VRRT::Vector3D *points, *normals;
+  bvh = VRRT::BVHGPU(cpuBVH, &points, &normals);
   delete cpuBVH;
 
+  //copy parameters to GPU global memory
+  VRRT::constantParams params;
+  params.numLights = app->scene->lights.size();
+  params.max_ray_depth = app->max_ray_depth;
+  params.ns_aa = app->ns_aa;
+  params.ns_area_light = app->ns_area_light;
+  params.w = image_w;
+  params.h = image_h;
+  params.points = points;
+  params.normals = normals;
+  cudaCheckError( cudaMemcpyToSymbol(cuGlobals, &params, sizeof(VRRT::constantParams)) );
+
+
   printf("Done!\n");
- 
+
   blockDim = dim3(256);
   gridDim = dim3((image_w + blockDim.x - 1) / blockDim.x,
                  (image_h + blockDim.y - 1) / blockDim.y);
 
   /* Initialize cuRAND state */
-  
+
   printf("Initializng cuRAND...\n");
   stateSize = blockDim.x * blockDim.y * gridDim.x * gridDim.y;
   cudaCheckError(cudaMalloc(&state, sizeof(curandState) * stateSize));
@@ -95,19 +111,19 @@ void Scene::initCuda() {
   cudaCheckError(cudaGetLastError());
   cudaCheckError(cudaDeviceSynchronize());
   printf("Done!\n");
- 
+
   printf("Transferring lights over...\n");
   cudaCheckError(cudaMalloc(&lights, sizeof(VRRT::SceneLight) * app->scene->lights.size()));
   cudaCheckError(cudaMemcpy(lights, app->scene->lights.data(), sizeof(VRRT::SceneLight) * app->scene->lights.size(), cudaMemcpyHostToDevice));
   printf("Done!\n");
-} 
+}
 
 void deleteVBO(GLuint *fbo, struct cudaGraphicsResource *fbo_res) {
   checkCudaErrors(cudaGraphicsUnregisterResource(fbo_res));
 
   glBindBuffer(1, *fbo);
   glDeleteBuffers(1, fbo);
- 
+
   *fbo = 0;
 }
 
@@ -122,7 +138,7 @@ void Scene::initGL() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, image_w, image_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo[i]);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex[i], 0);
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&cuda_fbo_resource[i], tex[i], GL_TEXTURE_2D, cudaGraphicsMapFlagsNone)); 
+    checkCudaErrors(cudaGraphicsGLRegisterImage(&cuda_fbo_resource[i], tex[i], GL_TEXTURE_2D, cudaGraphicsMapFlagsNone));
     checkCudaErrors(cudaGraphicsMapResources(1, &cuda_fbo_resource[i], 0));
     printf("cudaResource was mapped, getting pointer now...\n");
     devRenderbuffer[i] = cudaArray_t();
@@ -170,7 +186,7 @@ void Scene::runStep(char *fname) {
                                               app->max_ray_depth, state);
   cudaCheckError(cudaGetLastError());
   cudaCheckError(cudaDeviceSynchronize());
-  
+
   unsigned char *frame_out = new unsigned char[4*image_w*image_h];
   cudaCheckError(cudaMemcpy(frame_out, devOutput, 4*image_w*image_h, cudaMemcpyDeviceToHost));
   for (int i = 0; i < image_h  / 2; i++) {
@@ -182,7 +198,7 @@ void Scene::runStep(char *fname) {
   }
 
   lodepng::encode(fname, frame_out, image_w, image_h);
-  
+
   delete frame_out;
   cudaCheckError(cudaFree(devOutput));
 }
@@ -191,7 +207,7 @@ void Scene::runStep(char *fname) {
 void Scene::timestep(double /*absTime*/, double dt) {
 
 //  printf("Entered timestep...\n");
- 
+
   cudaCheckError(cudaDeviceSynchronize());
 
   // Actual computation
@@ -200,18 +216,18 @@ void Scene::timestep(double /*absTime*/, double dt) {
 //  cudaCheckError(cudaDeviceSynchronize());
 
   // Actually run the raytracer...
-  VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera, 
+  VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera,
                                               lights, app->scene->lights.size(),
-                                              bvh, image_h, image_w, 
-                                              app->ns_aa, app->ns_area_light, 
-                                              app->max_ray_depth, state);  
-  
+                                              bvh, image_h, image_w,
+                                              app->ns_aa, app->ns_area_light,
+                                              app->max_ray_depth, state);
+
   cudaCheckError(cudaGetLastError());
   cudaCheckError(cudaDeviceSynchronize());
 
   // Copy into the FBO...
   cudaCheckError(cudaMemcpyToArray(devRenderbuffer[eye], 0, 0, devOutput, 4*image_w*image_h, cudaMemcpyDeviceToDevice));
-  
+
 
   cudaCheckError(cudaDeviceSynchronize());
   // And, we're all done.

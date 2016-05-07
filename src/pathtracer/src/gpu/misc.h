@@ -8,8 +8,6 @@ namespace VRRT {
 
 #ifdef __CUDACC__ //nvcc
 
-static const float PI = 3.14159;
-
 #define DEBUG_
 
 #ifdef DEBUG_

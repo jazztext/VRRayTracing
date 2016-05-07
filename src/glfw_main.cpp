@@ -230,7 +230,7 @@ void keyboard(GLFWwindow* pWindow, int key, int codes, int action, int mods)
               initialPos[0].z -= 0.1;
               initialPos[1].z -= 0.1;
 //            g_app.m_scene.app->camera.move_forward(0.1);
-            
+
 //            g_app.m_scene.app->camera.rotate_by(0, 0.1);
             break;
         case 'S':
@@ -824,7 +824,7 @@ int main(int argc, char** argv)
     std::string filename = "Raytraced.png";
     char *fname;
     int numRays = 0;
-    
+
     while ((opt = getopt(argc, argv, "s:l:t:m:e:h:b:ir:o:")) != -1) {
       switch (opt) {
         case 's':
@@ -881,7 +881,7 @@ int main(int argc, char** argv)
    g_app.m_scene.app = app;
 
    delete sceneInfo;
- 
+
    if (runHarness) {
      FILE *fp = fopen(fname, "r");
      char buf[1024];
@@ -1187,16 +1187,6 @@ int main(int argc, char** argv)
     LOG_INFO("Initializing CUDA...");
     g_app.m_scene.initCuda();
 
-    std::vector<CMU462::StaticScene::Primitive*> primitives;
-    for (CMU462::StaticScene::SceneObject *obj : app->scene->objects) {
-      const std::vector<CMU462::StaticScene::Primitive*> &obj_prims = obj->get_primitives();
-      primitives.reserve(primitives.size() + obj_prims.size());
-      primitives.insert(primitives.end(), obj_prims.begin(), obj_prims.end());
-    }
-    CMU462::StaticScene::BVHAccel *bvh = new CMU462::StaticScene::BVHAccel(primitives, 4);
-    g_app.m_scene.bvh = VRRT::BVHGPU(bvh);
-
-
     LOG_INFO("glfwWindowShouldClose: %d", glfwWindowShouldClose(l_Window));
 
     initialPos[0] = OVR::Vector3f(g_app.m_EyeRenderDesc[0].HmdToEyeViewOffset);
@@ -1255,7 +1245,7 @@ int main(int argc, char** argv)
         }
 
         if (saveData) {
-          fprintf(fp, "%f %f %f ", g_app.m_scene.app->camera.pos[0], 
+          fprintf(fp, "%f %f %f ", g_app.m_scene.app->camera.pos[0],
                                    g_app.m_scene.app->camera.pos[1],
                                    g_app.m_scene.app->camera.pos[2]);
           for (int i = 0; i < 3; i++) {

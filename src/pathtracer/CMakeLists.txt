@@ -70,7 +70,7 @@ if(LINUX)
   # GCC only
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
-    set(GCC_CXX_FLAGS "-O3 -m64")
+    set(GCC_CXX_FLAGS "-O3 -m64 -std=c++11")
 
     # X11 Dependencies
     if(NOT BUILD_LIBCMU462)

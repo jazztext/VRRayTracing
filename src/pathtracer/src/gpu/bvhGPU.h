@@ -47,6 +47,8 @@ struct BVHNodeGPU {
 class BVHGPU {
  public:
 
+   BVHGPU() { }
+
    BVHNodeGPU *flattenNode(CMU462::StaticScene::BVHNode *node,
                            std::vector<BVHNodeGPU> &flatNodes);
 

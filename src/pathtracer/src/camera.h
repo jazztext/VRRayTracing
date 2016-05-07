@@ -83,7 +83,6 @@ class Camera {
   __device__
   VRRT::Ray generate_ray(double x, double y) const;
 
- private:
   // Computes pos, screenXDir, screenYDir from target, r, phi, theta.
   void compute_position();
 
