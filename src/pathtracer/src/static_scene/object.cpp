@@ -41,6 +41,7 @@ Mesh::Mesh(const HalfedgeMesh& mesh, VRRT::BSDF* bsdf) {
   }
 
   this->bsdf = bsdf;
+  this->nVerts = vertexI;
 
 }
 

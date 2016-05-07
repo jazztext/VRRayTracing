@@ -19,14 +19,21 @@ struct Intersection {
   __device__
   Intersection() : t (infy()), primitive(NULL), bsdf(NULL) { }
 
+  Vector3D n;  ///< normal at point of intersection
+
   float t;    ///< time of intersection
 
   const PrimitiveGPU* primitive;  ///< the primitive intersected
 
-  Vector3D n;  ///< normal at point of intersection
-
   BSDF* bsdf; ///< BSDF of the surface at point of intersection
 
+};
+
+struct IntersectionSoA {
+  Vector3D n[256];
+  float t[256];
+  const PrimitiveGPU* primitive[256];
+  BSDF *bsdf[256];
 };
 
 } // namespace CMU462

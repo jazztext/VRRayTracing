@@ -109,7 +109,7 @@ class BVHAccel : public Aggregate {
    */
   BVHNode* get_root() const { return root; }
 
-  VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF*, VRRT::BSDF*> &bsdfs)
+  VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs, std::unordered_map<const Mesh *, int> &meshes, int &nextOffset)
   {
     return VRRT::PrimitiveGPU();
   }

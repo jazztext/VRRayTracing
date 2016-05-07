@@ -19,8 +19,12 @@
 #include <curand_kernel.h>
 #include <cuda_profiler_api.h>
 
+#define MAX_LIGHTS 10
 
 namespace VRRT {
+
+__constant__ constantParams cuGlobals;
+__constant__ SceneLight cuLights[MAX_LIGHTS];
 
 __device__ inline unsigned char colorToChar(float c)
 {
@@ -30,15 +34,13 @@ __device__ inline unsigned char colorToChar(float c)
   else return (unsigned char) c;
 }
 
-__device__ Spectrum trace_ray(Ray r,
-                              SceneLight *lights,
-                              int numLights,
-                              BVHGPU *bvh, int ns_area_light, int max_ray_depth,
-                              curandState *state, bool includeLe = false) {
-  Spectrum total, multiplier(1, 1, 1);
+__device__ Spectrum trace_ray(Ray r, BVHGPU *bvh, curandState *state,
+                              bool includeLe = false) {
+  Spectrum total = Spectrum::make(0, 0, 0);
+  Spectrum multiplier = Spectrum::make(1, 1, 1);
   while (1) {
 
-  if (r.depth > max_ray_depth) return total;
+  if (r.depth > cuGlobals.max_ray_depth) return total;
   Intersection isect;
   //check for intersection
   if (!bvh->intersect(r, &isect)) {
@@ -47,7 +49,7 @@ __device__ Spectrum trace_ray(Ray r,
   }
 
   //initialize L_out with emission from intersected material, if applicable
-  Spectrum L_out = includeLe ? isect.bsdf->get_emission() : Spectrum();
+  Spectrum L_out = includeLe ? isect.bsdf->get_emission() : Spectrum::make();
 
   Vector3D hit_p = r.o + r.d * isect.t;
   Vector3D hit_n = isect.n;
@@ -67,9 +69,9 @@ __device__ Spectrum trace_ray(Ray r,
   float dist_to_light;
   float pdf;
 
-  for (int n = 0; n < numLights; n++) {
-    SceneLight &light = lights[n];
-    int num_light_samples = light.is_delta_light() ? 1 : ns_area_light;
+  for (int n = 0; n < cuGlobals.numLights; n++) {
+    SceneLight &light = cuLights[n];
+    int num_light_samples = light.is_delta_light() ? 1 : cuGlobals.ns_area_light;
 
     // integrate light over the hemisphere about the normal
     float scale = 1.f / num_light_samples;
@@ -89,7 +91,7 @@ __device__ Spectrum trace_ray(Ray r,
       // evaluate surface bsdf
       Spectrum f = isect.bsdf->f(w_out, w_in);
 
-      Ray shadow = Ray(hit_p + .0001f*dir_to_light, dir_to_light);
+      Ray shadow = Ray(hit_p + .00001f*dir_to_light, dir_to_light);
       Intersection shadowIsect;
       if (!bvh->intersect(shadow, &shadowIsect) ||
           shadowIsect.t > dist_to_light)
@@ -97,7 +99,7 @@ __device__ Spectrum trace_ray(Ray r,
     }
   }
 
-  total += multiplier * L_out;
+  total +=  multiplier * L_out;
 
   Vector3D w_i;
   float pdf2;
@@ -105,9 +107,9 @@ __device__ Spectrum trace_ray(Ray r,
   Spectrum s = isect.bsdf->sample_f(w_out, &w_i, &pdf2, inMaterial, state);
   w_i = w2o.inv() * w_i;
   w_i.normalize();
-  float killP = 1.f - s.illum();
+  float killP = 1.f - (multiplier).illum();
   killP = clamp(killP, 0.0f, 1.0f);
-  if (UniformGridSampler2D().get_sample(state).x < killP) return total;
+  if (curand_uniform(state) < killP) return total;
   Ray newR = Ray(hit_p + EPS_F*w_i, w_i);
   newR.depth = r.depth + 1;
   newR.min_t = 0.0;
@@ -119,38 +121,39 @@ __device__ Spectrum trace_ray(Ray r,
   }
 }
 
-__global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c,
-                               SceneLight *lights,
-                               int numLights, BVHGPU bvh, int h, int w,
-                               int ns_aa, int ns_area_light, int max_ray_depth,
+__global__ void raytrace_pixel(unsigned int *img, CMU462::Camera c, BVHGPU bvh,
                                curandState *state)
 {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int y = blockIdx.y * blockDim.y + threadIdx.y;
-  if (x >= w || y >= h) return;
+  if (x >= cuGlobals.w || y >= cuGlobals.h) return;
   int id = y * gridDim.x * blockDim.x + x;
   curandState localState = state[id];
 
   Spectrum total = Spectrum();
-  if (ns_aa > 1) {
-    UniformGridSampler2D gridSampler;
-    for (int i = 0; i < ns_aa; i++) {
-      Vector2D p = gridSampler.get_sample(&localState);
-      Ray r = c.generate_ray((x + p.x) / w, (y + p.y) / h);
-      total += trace_ray(r, lights, numLights, &bvh, ns_area_light,
-                         max_ray_depth, &localState, true);
+  if (cuGlobals.ns_aa > 1) {
+    for (int i = 0; i < cuGlobals.ns_aa; i++) {
+      Vector2D p = uniformGridSample(&localState);
+      Ray r = c.generate_ray((x + p.x) / cuGlobals.w, (y + p.y) / cuGlobals.h);
+      total += trace_ray(r, &bvh, &localState, true);
     }
-    total *= (1.0 / ns_aa);
+    total *= (1.0 / cuGlobals.ns_aa);
   } else {
-    Ray r = c.generate_ray((x + 0.5) / w, (y + 0.5) / h);
-    total = trace_ray(r, lights, numLights, &bvh, ns_area_light, max_ray_depth,
-                      &localState, true) * (1.f / ns_aa);
+    Ray r = c.generate_ray((x + 0.5) / cuGlobals.w, (y + 0.5) / cuGlobals.h);
+    total = trace_ray(r, &bvh, &localState, true);
   }
-  int ind = 4 * (x + y * w);
-  img[ind]     = colorToChar(total.r);
-  img[ind + 1] = colorToChar(total.g);
-  img[ind + 2] = colorToChar(total.b);
-  state[id] = localState;
+  int ind = (x + y * cuGlobals.w);
+  //weird union stuff to make sure all 4 bytes are copied over at once
+  union {
+    unsigned char channels[4];
+    unsigned int p;
+  };
+  channels[0] = colorToChar(total.r);
+  channels[1] = colorToChar(total.g);
+  channels[2] = colorToChar(total.b);
+  channels[3] = 255;
+  img[ind] = p;
+  //state[id] = localState;
 }
 
 __global__ void initCurand(curandState *state)
@@ -161,14 +164,19 @@ __global__ void initCurand(curandState *state)
   curand_init(1234, ind, 0, &state[ind]);
 }
 
-__global__ void initBuffer(unsigned char *outBuffer, int h, int w)
+__global__ void initBuffer(unsigned int *outBuffer)
 {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int y = blockIdx.y * blockDim.y + threadIdx.y;
-  if (x >= w || y >= h) return;
+  if (x >= cuGlobals.w || y >= cuGlobals.h) return;
+  union {
+    unsigned char channels[4];
+    unsigned int p;
+  };
   for (int i = 0; i < 4; i++) {
-    outBuffer[i + 4 * (x + w * y)] = 255*(i==3);
+    channels[i] = 255*(i==3);
   }
+  outBuffer[x + cuGlobals.w * y] = p;
 }
 
 void setup()
@@ -190,8 +198,6 @@ void setup()
       printf("   SMs:        %d\n", deviceProps.multiProcessorCount);
       printf("   Global mem: %.0f MB\n", static_cast<float>(deviceProps.totalGlobalMem) / (1024 * 1024));
       printf("   CUDA Cap:   %d.%d\n", deviceProps.major, deviceProps.minor);
-      printf("   CUDA Prohibited Mode: %d\n", deviceProps.computeMode == cudaComputeModeProhibited);
-      if (i == deviceCount-1) cudaCheckError(cudaSetDevice(i));
   }
   printf("---------------------------------------------------------\n");
 
@@ -206,10 +212,12 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   dim3 blockDim(256);
   dim3 gridDim((screenW + blockDim.x - 1) / blockDim.x,
                (screenH + blockDim.y - 1) / blockDim.y);
-  unsigned char *outBuffer, *frame_out = new unsigned char[4*screenW*screenH];
+  unsigned int *outBuffer;
+  unsigned char *frame_out = new unsigned char[4*screenW*screenH];
+
   //initialize output buffer on GPU
-  cudaCheckError( cudaMalloc(&outBuffer, sizeof(unsigned char) * screenW * screenH * 4) );
-  initBuffer<<<gridDim, blockDim>>>(outBuffer, screenH, screenW);
+  cudaCheckError( cudaMalloc(&outBuffer, sizeof(unsigned int) * screenW * screenH) );
+  initBuffer<<<gridDim, blockDim>>>(outBuffer);
   cudaCheckError( cudaGetLastError() );
   cudaCheckError( cudaDeviceSynchronize() );
 
@@ -225,19 +233,29 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   fflush(stdout);
   float start = CycleTimer::currentSeconds();
   //construct bvh on GPU
-  BVHGPU bvhGPU(bvh);
+  Vector3D *points, *normals;
+  BVHGPU bvhGPU(bvh, &points, &normals);
   float end = CycleTimer::currentSeconds();
   std::cout << "Done! (" << end - start << " sec)\n";
+
+  //copy parameters to GPU global memory
+  constantParams params;
+  params.numLights = scene->lights.size();
+  params.max_ray_depth = max_ray_depth;
+  params.ns_aa = ns_aa;
+  params.ns_area_light = ns_area_light;
+  params.w = screenW;
+  params.h = screenH;
+  params.points = points;
+  params.normals = normals;
+  cudaCheckError( cudaMemcpyToSymbol(cuGlobals, &params, sizeof(constantParams)) );
 
   //copy lights over to GPU
   std::cout << "Copying Lights to GPU... ";
   fflush(stdout);
   start = CycleTimer::currentSeconds();
-  SceneLight *lights;
-  cudaCheckError( cudaMalloc(&lights, sizeof(SceneLight) * scene->lights.size()) );
-  cudaCheckError( cudaMemcpy(lights, scene->lights.data(),
-                             sizeof(SceneLight) * scene->lights.size(),
-                             cudaMemcpyHostToDevice) );
+  cudaCheckError( cudaMemcpyToSymbol(cuLights, scene->lights.data(),
+                                     sizeof(SceneLight) * scene->lights.size()) );
 
   end = CycleTimer::currentSeconds();
   std::cout << "Done! (" << end - start << " sec)\n";
@@ -247,19 +265,15 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   fflush(stdout);
   cudaProfilerStart();
   start = CycleTimer::currentSeconds();
-  raytrace_pixel<<<gridDim, blockDim>>>(outBuffer, *c, lights,
-                                        scene->lights.size(), bvhGPU, screenH,
-                                        screenW, ns_aa, ns_area_light,
-                                        max_ray_depth, state);
+  raytrace_pixel<<<gridDim, blockDim>>>(outBuffer, *c, bvhGPU, state);
   cudaCheckError( cudaGetLastError() );
   cudaCheckError( cudaDeviceSynchronize() );
   end = CycleTimer::currentSeconds();
   cudaProfilerStop();
-  std::cout << "start: " << start << ", end: " << end << "\n";
   std::cout << "Done! (" << end - start << " sec)\n";
 
   //copy image into CPU buffer
-  cudaCheckError( cudaMemcpy(frame_out, outBuffer, 4*screenW*screenH, cudaMemcpyDeviceToHost) );
+  cudaCheckError( cudaMemcpy(frame_out, outBuffer, sizeof(int)*screenW*screenH, cudaMemcpyDeviceToHost) );
 
   //write image to file
   lodepng::encode(fname, frame_out, screenW, screenH);
@@ -269,10 +283,6 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   delete frame_out;
   cudaCheckError( cudaFree(state) );
   cudaCheckError( cudaFree(outBuffer) );
-  //for (int i = 0; i < scene->lights.size(); i++) {
-  //  cudaFree(cpuLights[i]);
-  //}
-  cudaFree(lights);
   cudaDeviceReset();
 }
 

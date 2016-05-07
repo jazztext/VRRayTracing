@@ -16,8 +16,8 @@ struct Ray {
   float min_t; ///< treat the ray as a segment (ray "begin" at max_t)
   float max_t; ///< treat the ray as a segment (ray "ends" at max_t)
 
-  Vector3D inv_d;  ///< component wise inverse
-  int sign[3];     ///< fast ray-bbox intersection
+  //Vector3D inv_d;  ///< component wise inverse
+  //int sign[3];     ///< fast ray-bbox intersection
   bool inMaterial;
 
   Ray() { }
@@ -31,11 +31,13 @@ struct Ray {
    */
   __device__
   Ray(const Vector3D& o, const Vector3D& d, int depth = 0)
-        : o(o), d(d), min_t(0.0), max_t(infy()), depth(depth) {
-    inv_d = Vector3D(1 / d.x, 1 / d.y, 1 / d.z);
-    sign[0] = (inv_d.x < 0);
-    sign[1] = (inv_d.y < 0);
-    sign[2] = (inv_d.z < 0);
+        : min_t(0.0), max_t(infy()), depth(depth) {
+    this->o = o;
+    this->d = d;
+    //inv_d = Vector3D::make(1 / d.v.x, 1 / d.v.y, 1 / d.v.z);
+    //sign[0] = (inv_d.v.x < 0);
+    //sign[1] = (inv_d.v.y < 0);
+    //sign[2] = (inv_d.v.z < 0);
     inMaterial = false;
   }
 
@@ -49,11 +51,13 @@ struct Ray {
    */
   __device__
   Ray(const Vector3D& o, const Vector3D& d, float max_t, int depth = 0)
-        : o(o), d(d), min_t(0.0), max_t(max_t), depth(depth) {
-    inv_d = Vector3D(1 / d.x, 1 / d.y, 1 / d.z);
-    sign[0] = (inv_d.x < 0);
-    sign[1] = (inv_d.y < 0);
-    sign[2] = (inv_d.z < 0);
+        : min_t(0.0), max_t(max_t), depth(depth) {
+    this->d = d;
+    this->o = o;
+    //inv_d = Vector3D::make(1 / d.v.x, 1 / d.v.y, 1 / d.v.z);
+    //sign[0] = (inv_d.v.x < 0);
+    //sign[1] = (inv_d.v.y < 0);
+    //sign[2] = (inv_d.v.z < 0);
     inMaterial = false;
   }
 

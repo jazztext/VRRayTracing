@@ -48,7 +48,6 @@ struct Scene {
 
   // for sake of consistency of the scene object Interface
   std::vector<VRRT::SceneLight> lights;
- 
 
   // TODO (sky) :
   // Adding object with emission BSDFs as mesh lights and sphere lights so

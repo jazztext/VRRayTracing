@@ -20,11 +20,11 @@ __device__ inline float clamp (float n, float lower, float upper) {
 }
 
 __device__ inline float cos_theta(const Vector3D& w) {
-  return w.z;
+  return w.v.z;
 }
 
 __device__ inline float abs_cos_theta(const Vector3D& w) {
-  return fabsf(w.z);
+  return fabsf(w.v.z);
 }
 
 __device__ inline float sin_theta2(const Vector3D& w) {
@@ -38,13 +38,13 @@ __device__ inline float sin_theta(const Vector3D& w) {
 __device__ inline float cos_phi(const Vector3D& w) {
   float sinTheta = sin_theta(w);
   if (sinTheta == 0.0) return 1.0;
-  return clamp(w.x / sinTheta, -1.0, 1.0);
+  return clamp(w.v.x / sinTheta, -1.0, 1.0);
 }
 
 __device__ inline float sin_phi(const Vector3D& w) {
   float sinTheta = sin_theta(w);
   if (sinTheta) return 0.0;
-  return clamp(w.y / sinTheta, -1.0, 1.0);
+  return clamp(w.v.y / sinTheta, -1.0, 1.0);
 }
 
 __device__ void make_coord_space(Matrix3x3& o2w, const Vector3D& n);
@@ -57,17 +57,21 @@ class BSDF {
    enum BSDFType { DIFFUSE, MIRROR, GLASS, EMISSION };
 
   __host__
-  BSDF(const CMU462::Spectrum& c, BSDFType t) : color(c), t(t)
+  BSDF(const CMU462::Spectrum& c, BSDFType t) : t(t)
   {
+    color = Spectrum::make(c);
     if (t != DIFFUSE && t != MIRROR && t != EMISSION)
       std::cout << "BSDF construction error\n";
   }
   __host__
-  BSDF(const CMU462::Spectrum& transmittance, const Spectrum& reflectance,
+  BSDF(const CMU462::Spectrum& transmittance,
+       const CMU462::Spectrum& reflectance,
        float roughness, float ior, BSDFType t) :
-    color(transmittance), color2(reflectance), roughness(roughness), ior(ior),
+    roughness(roughness), ior(ior),
     t(t)
   {
+    color = Spectrum::make(transmittance);
+    color2 = Spectrum::make(reflectance);
     if (t != GLASS) std::cout << "BSDF construction error\n";
   }
 
@@ -139,7 +143,6 @@ class BSDF {
  private:
   BSDFType t;
   Spectrum color, color2; //can be albedo, reflectance, transmittance, etc.
-  CosineWeightedHemisphereSampler3D sampler;
   float roughness;
   float ior;
 

@@ -37,6 +37,7 @@ class Mesh : public SceneObject {
 
   Vector3D *positions;  ///< position array
   Vector3D *normals;    ///< normal array
+  int nVerts;
 
  private:
 

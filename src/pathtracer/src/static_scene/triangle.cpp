@@ -73,20 +73,19 @@ bool Triangle::intersect(const Ray& r, Intersection *i) const {
 
 }
 
-VRRT::PrimitiveGPU Triangle::toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs)
+VRRT::PrimitiveGPU Triangle::toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs, std::unordered_map<const Mesh *, int> &meshes, int &nextOffset)
 {
-  Vector3D p1 = mesh->positions[v1];
-  Vector3D p2 = mesh->positions[v2];
-  Vector3D p3 = mesh->positions[v3];
-  Vector3D n1 = mesh->normals[v1];
-  Vector3D n2 = mesh->normals[v2];
-  Vector3D n3 = mesh->normals[v3];
 
   if (!bsdfs.count(get_bsdf())) {
     bsdfs.emplace(get_bsdf(), get_bsdf()->copyToDev());
   }
+  if (!meshes.count(mesh)) {
+    meshes.emplace(mesh, nextOffset);
+    nextOffset += mesh->nVerts;
+  }
 
-  return VRRT::PrimitiveGPU(p1, p2, p3, n1, n2, n3, bsdfs[get_bsdf()]);
+  int off = meshes[mesh];
+  return VRRT::PrimitiveGPU(off + v1, off + v2, off + v3, bsdfs[get_bsdf()]);
 }
 
 } // namespace StaticScene

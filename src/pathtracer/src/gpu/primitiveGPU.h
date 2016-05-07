@@ -13,9 +13,7 @@ class PrimitiveGPU {
 
   PrimitiveGPU() { }
 
-  PrimitiveGPU(CMU462::Vector3D p1, CMU462::Vector3D p2, CMU462::Vector3D p3,
-               CMU462::Vector3D n1, CMU462::Vector3D n2, CMU462::Vector3D n3,
-               BSDF *bsdf);
+  PrimitiveGPU(int i1, int i2, int i3, BSDF *bsdf);
 
   PrimitiveGPU(CMU462::Vector3D o, float r, BSDF *bsdf);
 
@@ -48,21 +46,20 @@ class PrimitiveGPU {
              false otherwise
    */
   __device__
-  bool intersect(Ray& r, Intersection* i);
+  bool intersect(Ray& r, IntersectionSoA* i);
 
+  int type;
+  Vector3D o; ///< origin of the sphere
  private:
   __device__ BBox triangleGetBBox();
   __device__ BBox sphereGetBBox();
-  __device__ bool triangleIntersect(Ray& r, Intersection* i);
+  __device__ bool triangleIntersect(Ray& r, IntersectionSoA* i);
   __device__ bool test(Ray& r, float& t1, float& t2) const;
-  __device__ bool sphereIntersect(Ray& r, Intersection* i);
+  __device__ bool sphereIntersect(Ray& r, IntersectionSoA* i);
 
-  enum {TRI, SPHERE};
+  enum {TRI = 0, SPHERE = 1};
 
-  int type;
-  Vector3D p1, p2, p3; //traingle points
-  Vector3D n1, n2, n3; //triangle normals
-  Vector3D o; ///< origin of the sphere
+  int3 inds;
   float r;   ///< radius
   float r2;  ///< radius squared
   BSDF *bsdf;

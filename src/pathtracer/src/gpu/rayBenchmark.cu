@@ -2,6 +2,7 @@
 #include "bvhGPU.h"
 #include "../bvh.h"
 #include "../cycleTimer.h"
+#include "pathtracer.h"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -9,6 +10,8 @@
 #include <cuda_profiler_api.h>
 
 namespace VRRT {
+
+extern __constant__ constantParams cuGlobals;
 
 __global__ void initCurand2(curandState *state)
 {
@@ -23,7 +26,8 @@ __device__ Vector3D pointInBox(BBox bbox, curandState *state)
   float x = curand_uniform(state),
         y = curand_uniform(state),
         z = curand_uniform(state);
-  Vector3D p(x * bbox.extent.x, y * bbox.extent.y, z * bbox.extent.z);
+  Vector3D p;
+  p = Vector3D::make(x * bbox.extent.v.x, y * bbox.extent.v.y, z * bbox.extent.v.z);
   return p + bbox.min;
 }
 
@@ -50,7 +54,13 @@ __global__ void raycast(Ray *rays, int numRays, BVHGPU bvh)
 
 void benchmark(CMU462::StaticScene::BVHAccel *bvh, int numRays)
 {
-  BVHGPU bvhGPU(bvh);
+  Vector3D *points, *normals;
+  BVHGPU bvhGPU(bvh, &points, &normals);
+  constantParams params;
+  params.points = points;
+  params.normals = normals;
+  cudaCheckError( cudaMemcpyToSymbol(cuGlobals, &params, sizeof(constantParams)) );
+
   dim3 blockDim(256);
   dim3 gridDim((numRays + blockDim.x - 1) / blockDim.x);
 

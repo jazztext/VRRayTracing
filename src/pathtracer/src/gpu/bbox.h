@@ -25,8 +25,8 @@ struct BBox {
    */
   __device__
   BBox() {
-    max = Vector3D(-infy(), -infy(), -infy());
-    min = Vector3D( infy(),  infy(),  infy());
+    max = Vector3D::make(-infy(), -infy(), -infy());
+    min = Vector3D::make( infy(),  infy(),  infy());
     extent = max - min;
   }
 
@@ -35,7 +35,11 @@ struct BBox {
    * Creates a bounding box that includes a single point.
    */
   __device__
-  BBox(const Vector3D& p) : min(p), max(p) { extent = max - min; }
+  BBox(const Vector3D& p) {
+    min = p;
+    max = p;
+    extent = max - min;
+  }
 
   /**
    * Constructor.
@@ -44,12 +48,20 @@ struct BBox {
    * \param max the max corner
    */
   __device__
-  BBox(const Vector3D& min, const Vector3D& max) :
-       min(min), max(max), extent(max - min) { }
+  BBox(const Vector3D& min_, const Vector3D& max_)
+  {
+    min = min_;
+    max = max_;
+    extent = max - min;
+  }
 
   __host__
-  BBox(const CMU462::Vector3D& min, const CMU462::Vector3D& max) :
-       min(min), max(max), extent(max - min) { }
+  BBox(const CMU462::Vector3D& min_, const CMU462::Vector3D& max_)
+  {
+    min = Vector3D::make(min_);
+    max = Vector3D::make(max_);
+    extent = Vector3D::make(max_ - min_);
+  }
 
   /**
    * Constructor.
@@ -58,8 +70,8 @@ struct BBox {
   __device__
   BBox(const float minX, const float minY, const float minZ,
        const float maxX, const float maxY, const float maxZ) {
-    min = Vector3D(minX, minY, minZ);
-    max = Vector3D(maxX, maxY, maxZ);
+    min = Vector3D::make(minX, minY, minZ);
+    max = Vector3D::make(maxX, maxY, maxZ);
 		extent = max - min;
   }
 
@@ -72,12 +84,12 @@ struct BBox {
    */
   __device__
   void expand(const BBox& bbox) {
-    min.x = fminf(min.x, bbox.min.x);
-    min.y = fminf(min.y, bbox.min.y);
-    min.z = fminf(min.z, bbox.min.z);
-    max.x = fmaxf(max.x, bbox.max.x);
-    max.y = fmaxf(max.y, bbox.max.y);
-    max.z = fmaxf(max.z, bbox.max.z);
+    min.v.x = fminf(min.v.x, bbox.min.v.x);
+    min.v.y = fminf(min.v.y, bbox.min.v.y);
+    min.v.z = fminf(min.v.z, bbox.min.v.z);
+    max.v.x = fmaxf(max.v.x, bbox.max.v.x);
+    max.v.y = fmaxf(max.v.y, bbox.max.v.y);
+    max.v.z = fmaxf(max.v.z, bbox.max.v.z);
     extent = max - min;
   }
 
@@ -90,12 +102,12 @@ struct BBox {
    */
   __device__
   void expand(const Vector3D& p) {
-    min.x = fminf(min.x, p.x);
-    min.y = fminf(min.y, p.y);
-    min.z = fminf(min.z, p.z);
-    max.x = fmaxf(max.x, p.x);
-    max.y = fmaxf(max.y, p.y);
-    max.z = fmaxf(max.z, p.z);
+    min.v.x = fmin(min.v.x, p.v.x);
+    min.v.y = fmin(min.v.y, p.v.y);
+    min.v.z = fmin(min.v.z, p.v.z);
+    max.v.x = fmax(max.v.x, p.v.x);
+    max.v.y = fmax(max.v.y, p.v.y);
+    max.v.z = fmax(max.v.z, p.v.z);
     extent = max - min;
   }
 
@@ -111,9 +123,9 @@ struct BBox {
   __device__
   float surface_area() const {
     if (empty()) return 0.0;
-    return 2 * (extent.x * extent.z +
-                extent.x * extent.y +
-                extent.y * extent.z);
+    return 2 * (extent.v.x * extent.v.z +
+                extent.v.x * extent.v.y +
+                extent.v.y * extent.v.z);
   }
 
   /**
@@ -125,7 +137,7 @@ struct BBox {
    */
   __device__
   bool empty() const {
-    return min.x > max.x || min.y > max.y || min.z > max.z;
+    return min.v.x > max.v.x || min.v.y > max.v.y || min.v.z > max.v.z;
   }
 
   /**

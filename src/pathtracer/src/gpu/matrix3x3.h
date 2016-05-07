@@ -15,30 +15,30 @@ class Matrix3x3 {
 
   public:
 
-  // The default constructor.
-  __device__
-  Matrix3x3(void) { }
-
   __host__ __device__
-  Matrix3x3(const CMU462::Matrix3x3& m)
+  static Matrix3x3 make(const CMU462::Matrix3x3& m)
   {
+    Matrix3x3 m1;
     for (int i = 0; i < 3; i++) {
-      entries[i] = Vector3D(m.entries[i]);
+      m1.entries[i] = Vector3D::make(m.entries[i]);
     }
+    return m1;
   }
 
   // Constructor for row major form data.
   // Transposes to the internal column major form.
   // REQUIRES: data should be of size 9 for a 3 by 3 matrix..
   __device__
-  Matrix3x3(float * data)
+  static Matrix3x3 make(float * data)
   {
+    Matrix3x3 m;
     for( int i = 0; i < 3; i++ ) {
       for( int j = 0; j < 3; j++ ) {
 	        // Transpostion happens within the () query.
-	        (*this)(i,j) = data[i*3 + j];
+	        m(i,j) = data[i*3 + j];
       }
     }
+    return m;
   }
 
   /**

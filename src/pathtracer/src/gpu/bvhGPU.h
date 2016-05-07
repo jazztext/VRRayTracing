@@ -22,15 +22,15 @@ struct BVHNodeGPU {
   BVHNodeGPU(CMU462::BBox bb, size_t start, size_t range)
       : start(start), range(range), l(NULL), r(NULL), minT(0)
   {
-    this->bb.max.x = bb.max.x;
-    this->bb.max.y = bb.max.y;
-    this->bb.max.z = bb.max.z;
-    this->bb.min.x = bb.min.x;
-    this->bb.min.y = bb.min.y;
-    this->bb.min.z = bb.min.z;
-    this->bb.extent.x = bb.extent.x;
-    this->bb.extent.y = bb.extent.y;
-    this->bb.extent.z = bb.extent.z;
+    this->bb.max.v.x = bb.max.x;
+    this->bb.max.v.y = bb.max.y;
+    this->bb.max.v.z = bb.max.z;
+    this->bb.min.v.x = bb.min.x;
+    this->bb.min.v.y = bb.min.y;
+    this->bb.min.v.z = bb.min.z;
+    this->bb.extent.v.x = bb.extent.x;
+    this->bb.extent.v.y = bb.extent.y;
+    this->bb.extent.v.z = bb.extent.z;
   }
 
   __device__
@@ -47,12 +47,11 @@ struct BVHNodeGPU {
 class BVHGPU {
  public:
 
-   BVHGPU() { };
-
    BVHNodeGPU *flattenNode(CMU462::StaticScene::BVHNode *node,
                            std::vector<BVHNodeGPU> &flatNodes);
 
-   BVHGPU(CMU462::StaticScene::BVHAccel *bvh);
+   BVHGPU(CMU462::StaticScene::BVHAccel *bvh, Vector3D **points,
+          Vector3D **normals);
 
   ~BVHGPU();
 
@@ -90,10 +89,11 @@ class BVHGPU {
   __device__
   bool intersect(Ray& r, Intersection* i) const;
 
+  PrimitiveGPU *primitives;
+  int numPrims;
  private:
   BVHNodeGPU *nodes; ///< root node of the BVH
   int numNodes;
-  PrimitiveGPU *primitives;
 };
 
 } // namespace StaticScene

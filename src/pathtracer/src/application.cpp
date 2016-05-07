@@ -152,12 +152,13 @@ VRRT::SceneLight Application::init_light(LightInfo& light,
     case Collada::LightType::NONE:
       break;
     case Collada::LightType::AMBIENT:
-      return VRRT::SceneLight(light.spectrum, VRRT::SceneLight::HEMISPHERE);
+      return VRRT::SceneLight::make(light.spectrum,
+                                    VRRT::SceneLight::HEMISPHERE);
     case Collada::LightType::DIRECTIONAL:
       direction = -(transform * Vector4D(light.direction, 1)).to3D();
       direction.normalize();
-      return VRRT::SceneLight(light.spectrum, direction,
-                              VRRT::SceneLight::DIRECTIONAL);
+      return VRRT::SceneLight::make(light.spectrum, direction,
+                                    VRRT::SceneLight::DIRECTIONAL);
     case Collada::LightType::AREA:
       position = (transform * Vector4D(light.position, 1)).to3D();
       direction = (transform * Vector4D(light.direction, 1)).to3D() - position;
@@ -169,11 +170,11 @@ VRRT::SceneLight Application::init_light(LightInfo& light,
       dim_xT = (transform * Vector4D(dim_x, 1)).to3D() - position;
       dim_yT = (transform * Vector4D(dim_y, 1)).to3D() - position;
 
-      return VRRT::SceneLight(light.spectrum, position, direction,
-                              dim_xT, dim_yT, VRRT::SceneLight::AREA);
+      return VRRT::SceneLight::make(light.spectrum, position, direction,
+                                    dim_xT, dim_yT, VRRT::SceneLight::AREA);
     case Collada::LightType::POINT:
       position = (transform * Vector4D(light.position, 1)).to3D();
-      return VRRT::SceneLight(light.spectrum, direction,
+      return VRRT::SceneLight::make(light.spectrum, direction,
                               VRRT::SceneLight::POINT);
     case Collada::LightType::SPOT:
       position = (transform * Vector4D(light.position, 1)).to3D();

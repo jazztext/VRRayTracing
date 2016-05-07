@@ -67,7 +67,7 @@ bool Sphere::intersect(const Ray& r, Intersection *i) const {
 
 }
 
-VRRT::PrimitiveGPU Sphere::toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs)
+VRRT::PrimitiveGPU Sphere::toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs, std::unordered_map<const Mesh *, int> &meshes, int &nextOff)
 {
   if (!bsdfs.count(get_bsdf())) {
     bsdfs.emplace(get_bsdf(), get_bsdf()->copyToDev());

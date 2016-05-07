@@ -61,7 +61,7 @@ namespace CMU462 { namespace StaticScene {
    */
   VRRT::BSDF* get_bsdf() const { return mesh->get_bsdf(); }
 
-  VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs);
+  VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs, std::unordered_map<const Mesh *, int> &meshes, int &nextOffset);
 
  private:
 

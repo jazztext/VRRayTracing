@@ -117,8 +117,8 @@ VRRT::Ray Camera::generate_ray(double x, double y) const {
   // compute position of the input sensor sample coordinate on the
   // canonical sensor plane one unit away from the pinhole.
 
-  VRRT::Matrix3x3 c2wD(c2w);
-  return VRRT::Ray(pos, (c2wD * VRRT::Vector3D(hFov * (x - .5) * PI / 180, vFov * (y - .5) * PI / 180, -1).unit()));
+  VRRT::Matrix3x3 c2wD = VRRT::Matrix3x3::make(c2w);
+  return VRRT::Ray(VRRT::Vector3D::make(pos), (c2wD * VRRT::Vector3D::make(hFov * (x - .5) * PI / 180, vFov * (y - .5) * PI / 180, -1).unit()));
 }
 
 

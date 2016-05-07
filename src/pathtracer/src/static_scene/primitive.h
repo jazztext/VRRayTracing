@@ -8,6 +8,8 @@
 
 namespace CMU462 { namespace StaticScene {
 
+class Mesh;
+
 /**
  * The abstract base class primitive is the bridge between geometry processing
  * and the shading subsystem. As such, its interface contains methods related
@@ -53,7 +55,8 @@ class Primitive {
   virtual VRRT::BSDF* get_bsdf() const = 0;
 
   //convert to GPU compatible version
-  virtual VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs) = 0;
+  virtual VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs, std::unordered_map<const Mesh *, int> &meshes, int &nextOffset) = 0;
+
 
 };
 

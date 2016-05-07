@@ -28,7 +28,7 @@ const Vector3D& Matrix3x3::operator[]( int j ) const {
 __device__
 void Matrix3x3::zero( float val ) {
   // sets all elements to val
-  entries[0] = entries[1] = entries[2] = Vector3D( val, val, val );
+  entries[0] = entries[1] = entries[2] = Vector3D::make( val, val, val );
 }
 
 __device__
@@ -208,9 +208,9 @@ __device__
 Matrix3x3 Matrix3x3::crossProduct( const Vector3D& u ) {
   Matrix3x3 B;
 
-  B(0,0) =   0.;  B(0,1) = -u.z;  B(0,2) =  u.y;
-  B(1,0) =  u.z;  B(1,1) =   0.;  B(1,2) = -u.x;
-  B(2,0) = -u.y;  B(2,1) =  u.x;  B(2,2) =   0.;
+  B(0,0) =   0.;  B(0,1) = -u.v.z;  B(0,2) =  u.v.y;
+  B(1,0) =  u.v.z;  B(1,1) =   0.;  B(1,2) = -u.v.x;
+  B(2,0) = -u.v.y;  B(2,1) =  u.v.x;  B(2,2) =   0.;
 
   return B;
 }
@@ -220,15 +220,15 @@ Matrix3x3 outer( const Vector3D& u, const Vector3D& v ) {
   Matrix3x3 B;
   float* Bij = (float*) &B;
 
-  *Bij++ = u.x*v.x;
-  *Bij++ = u.y*v.x;
-  *Bij++ = u.z*v.x;
-  *Bij++ = u.x*v.y;
-  *Bij++ = u.y*v.y;
-  *Bij++ = u.z*v.y;
-  *Bij++ = u.x*v.z;
-  *Bij++ = u.y*v.z;
-  *Bij++ = u.z*v.z;
+  *Bij++ = u.v.x*v.v.x;
+  *Bij++ = u.v.y*v.v.x;
+  *Bij++ = u.v.z*v.v.x;
+  *Bij++ = u.v.x*v.v.y;
+  *Bij++ = u.v.y*v.v.y;
+  *Bij++ = u.v.z*v.v.y;
+  *Bij++ = u.v.x*v.v.z;
+  *Bij++ = u.v.y*v.v.z;
+  *Bij++ = u.v.z*v.v.z;
 
   return B;
 }

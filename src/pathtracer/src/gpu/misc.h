@@ -1,14 +1,14 @@
 #ifndef __MISC_H__
 #define __MISC_H__
 
-#include <curand_kernel.h>
 #include <stdio.h>
+#include <curand.h>
 
 namespace VRRT {
 
 #ifdef __CUDACC__ //nvcc
 
-//__device__ const float PI = 3.14159;
+static const float PI = 3.14159;
 
 #define DEBUG_
 

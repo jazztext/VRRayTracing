@@ -78,7 +78,8 @@ class Application {
   void pathtrace(char *fname);
   void benchmark(int numRays);
 
-  void set_up_pathtracer();
+
+ private:
 
   StaticScene::Scene *scene;
 

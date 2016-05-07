@@ -55,14 +55,14 @@ class Vector4D {
    * Initializes from existing vector3D.
    */
   __device__
- Vector4D( const Vector3D& v ) : x( v.x ), y( v.y ), z( v.z ), w( 0.0 ) { }
+ Vector4D( const Vector3D& v ) : x( v.v.x ), y( v.v.y ), z( v.v.z ), w( 0.0 ) { }
 
  /**
    * Constructor.
    * Initializes from existing vector3D and w value.
    */
   __device__
- Vector4D( const Vector3D& v, float w ) : x( v.x ), y( v.y ), z( v.z ), w( w ) { }
+ Vector4D( const Vector3D& v, float w ) : x( v.v.x ), y( v.v.y ), z( v.v.z ), w( w ) { }
 
   // returns reference to the specified component (0-based indexing: x, y, z)
   __device__

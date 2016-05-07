@@ -25,16 +25,30 @@ class Spectrum {
    * \param b Intensity of the blue spectrum
    */
   __device__
-  Spectrum(float r = 0, float g = 0, float b = 0) : r(r), g(g), b(b) {}
+  static Spectrum make(float r_ = 0, float g_ = 0, float b_ = 0)
+  {
+    Spectrum s;
+    s.r = r_;
+    s.g = g_;
+    s.b = b_;
+    return s;
+  }
 
   __host__
-  Spectrum(const CMU462::Spectrum &s) : r(s.r), g(s.g), b(s.b) { }
+  static Spectrum make(const CMU462::Spectrum &s)
+  {
+    Spectrum s1;
+    s1.r = s.r;
+    s1.g = s.g;
+    s1.b = s.b;
+    return s1;
+  }
 
   // operators //
 
   __device__
   inline Spectrum operator+(const Spectrum &rhs) const {
-    return Spectrum(r + rhs.r, g + rhs.g, b + rhs.b);
+    return Spectrum::make(r + rhs.r, g + rhs.g, b + rhs.b);
   }
 
   __device__
@@ -47,7 +61,7 @@ class Spectrum {
 
   __device__
   inline Spectrum operator*(const Spectrum &rhs) const {
-    return Spectrum(r * rhs.r, g * rhs.g, b * rhs.b);
+    return Spectrum::make(r * rhs.r, g * rhs.g, b * rhs.b);
   }
 
   __device__
@@ -60,7 +74,7 @@ class Spectrum {
 
   __device__
   inline Spectrum operator*(float s) const {
-    return Spectrum(r * s, g * s, b * s);
+    return Spectrum::make(r * s, g * s, b * s);
   }
 
   __device__

@@ -62,7 +62,7 @@ class Sphere : public Primitive {
    */
   VRRT::BSDF* get_bsdf() const { return object->get_bsdf(); }
 
-  VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs);
+  VRRT::PrimitiveGPU toGPU(std::unordered_map<VRRT::BSDF *, VRRT::BSDF *> &bsdfs, std::unordered_map<const Mesh *, int> &meshes, int &nextOff);
 
   /**
    * Compute the normal at a point of intersection.

@@ -6,16 +6,13 @@ namespace VRRT {
 
 
 __device__
-Vector2D UniformGridSampler2D::get_sample(curandState *state) const {
-
-  // TODO:
-  // Implement uniform 2D grid sampler
+Vector2D uniformGridSample(curandState *state) {
   return Vector2D(curand_uniform(state), curand_uniform(state));
 }
 
 // Uniform Hemisphere Sampler3D Implementation //
 __device__
-Vector3D UniformHemisphereSampler3D::get_sample(curandState *state) const {
+Vector3D uniformHemisphereSample(curandState *state) {
 
   float Xi1 = curand_uniform(state);
   float Xi2 = curand_uniform(state);
@@ -27,25 +24,23 @@ Vector3D UniformHemisphereSampler3D::get_sample(curandState *state) const {
   float ys = sinf(theta) * sinf(phi);
   float zs = cosf(theta);
 
-  return Vector3D(xs, ys, zs);
+  return Vector3D::make(xs, ys, zs);
 
 }
 
 __device__
-Vector3D CosineWeightedHemisphereSampler3D::get_sample(curandState *state) const
+Vector3D cosineWeightedHemisphereSample(curandState *state)
 {
   float f;
-  return get_sample(state, &f);
+  return cosineWeightedHemisphereSample(state, &f);
 }
 
 __device__
-Vector3D CosineWeightedHemisphereSampler3D::get_sample(curandState *state,
-                                                       float *pdf) const {
-  // You may implement this, but don't have to.
+Vector3D cosineWeightedHemisphereSample(curandState *state, float *pdf) {
   float z1 = curand_uniform(state), z2 = curand_uniform(state);
   float theta = 2 * PI * z1, r = sqrtf(z2), z = sqrtf(1 - r*r);
   *pdf = z / PI;
-  return Vector3D(r * cosf(theta), r * sinf(theta), z);
+  return Vector3D::make(r * cosf(theta), r * sinf(theta), z);
 }
 
 

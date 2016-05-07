@@ -6,12 +6,12 @@ __device__
 bool BBox::intersect(Ray& r, float& t0, float& t1) const {
 
   //get intersections with all 6 bounding planes
-  float tx0 = (min.x - r.o.x) * r.inv_d.x;
-  float tx1 = (max.x - r.o.x) * r.inv_d.x;
-  float ty0 = (min.y - r.o.y) * r.inv_d.y;
-  float ty1 = (max.y - r.o.y) * r.inv_d.y;
-  float tz0 = (min.z - r.o.z) * r.inv_d.z;
-  float tz1 = (max.z - r.o.z) * r.inv_d.z;
+  float tx0 = (min.v.x - r.o.v.x) / r.d.v.x;
+  float tx1 = (max.v.x - r.o.v.x) / r.d.v.x;
+  float ty0 = (min.v.y - r.o.v.y) / r.d.v.y;
+  float ty1 = (max.v.y - r.o.v.y) / r.d.v.y;
+  float tz0 = (min.v.z - r.o.v.z) / r.d.v.z;
+  float tz1 = (max.v.z - r.o.v.z) / r.d.v.z;
   //sort  intersection times for each dimension
   float txMin = (tx0 < tx1) ? tx0 : tx1;
   float txMax = (tx0 < tx1) ? tx1 : tx0;
@@ -20,13 +20,12 @@ bool BBox::intersect(Ray& r, float& t0, float& t1) const {
   float tzMin = (tz0 < tz1) ? tz0 : tz1;
   float tzMax = (tz0 < tz1) ? tz1 : tz0;
   //get final intersect times
-  float tMin = fmax(txMin, fmax(tyMin, tzMin));
-  float tMax = fmin(txMax, fmin(tyMax, tzMax));
+  float tMin = fmaxf(txMin, fmaxf(tyMin, tzMin));
+  float tMax = fminf(txMax, fminf(tyMax, tzMax));
 
   if ((tMin <= tMax) && (tMin < t1) && (tMax > t0)) {
-    t0 = fmax(tMin, t0);
-    t1 = fmin(tMax, t1);
-    //r.max_t = t1;
+    t0 = fmaxf(tMin, t0);
+    t1 = fminf(tMax, t1);
     return true;
   }
   return false;
