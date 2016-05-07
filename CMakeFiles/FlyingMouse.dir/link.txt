@@ -1,0 +1,2 @@
+/usr/bin/ar cq libFlyingMouse.a  CMakeFiles/FlyingMouse.dir/src/FlyingMouse/FlyingMouse.cpp.o CMakeFiles/FlyingMouse.dir/src/FlyingMouse/VirtualTrackball.cpp.o
+/usr/bin/ranlib libFlyingMouse.a

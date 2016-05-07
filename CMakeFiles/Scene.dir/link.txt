@@ -1,0 +1,2 @@
+/usr/bin/ar cq libScene.a  CMakeFiles/Scene.dir/src/Scene/HydraScene.cpp.o CMakeFiles/Scene.dir/src/Scene/OVRScene.cpp.o CMakeFiles/Scene.dir/src/Scene/Scene_generated_Scene.cu.o
+/usr/bin/ranlib libScene.a

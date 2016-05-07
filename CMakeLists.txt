@@ -1,171 +1,442 @@
-cmake_minimum_required(VERSION 2.8)
-project(PathTracer)
+CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
+PROJECT( RiftSkeleton )
 
-#-------------------------------------------------------------------------------
-# Build options
-#-------------------------------------------------------------------------------
-option(BUILD_LIBCMU462 "Build with libCMU462"         ON)
-option(BUILD_DEBUG     "Build with debug settings"    OFF)
-option(BUILD_DOCS      "Build documentation"          OFF)
+INCLUDE(cmake_modules/InvokePython.cmake)
+INVOKEPYTHON( "tools/hardcode_shaders.py" )
+# Python script will dump generated headers to autogen/
+INCLUDE_DIRECTORIES("autogen/")
 
-#-------------------------------------------------------------------------------
-# Platform-specific settings
-#-------------------------------------------------------------------------------
+# GLFW, SDL, SFML
+SET( GL_FRAMEWORK "GLFW" CACHE STRING "Which OpenGL windowing framework to use" )
 
-###################
-# Building on OSX #
-###################
-if(APPLE)
+# Control linking to AntTweakBar and Sixense libraries by toggling a config flag.
+# @todo Write or find a "FindXXX.cmake" script to search typical install locations
+# on the build machine and link the libraries in.
+SET( USE_ANTTWEAKBAR FALSE CACHE BOOL "Use AntTweakBar" )
+SET( USE_SIXENSE FALSE CACHE BOOL "Use Sixense" )
 
-  # OSX Framework dependencies
-  if(NOT BUILD_LIBCMU462)
-    include_directories( "/System/Library/Frameworks" )
-    find_library (COCOA_LIBRARIES Cocoa)
-    find_library (IOKIT_LIBRARIES IOkit)
-    find_library (COREVIDEO_LIBRARIES CoreVideo)
-  endif()
+SET( USE_OCULUSSDK TRUE CACHE BOOL "Use Oculus SDK" )
+SET( USE_OSVR FALSE CACHE BOOL "Use OSVR SDK" )
 
-  # Clang configuration
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+SET( OVRSDK_VERSION "05" CACHE STRING "Which version of the OVR SDK to use - 05, 06, 07, or 08" )
 
-    set(CLANG_CXX_FLAGS "-std=c++11 -m64")
+SET( USE_CORE_CONTEXT TRUE CACHE BOOL "Use Core Context" )
+IF( USE_CORE_CONTEXT )
+    ADD_DEFINITIONS(-DUSE_CORE_CONTEXT)
+ENDIF()
 
-    if(BUILD_DEBUG)
-      set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -O3")
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -funroll-loops")
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-narrowing")
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-deprecated-register")
-    endif(BUILD_DEBUG)
+ADD_DEFINITIONS( -DPROJECT_NAME="${PROJECT_NAME}" )
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_CXX_FLAGS}")
+MESSAGE( "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}" )
+FIND_PACKAGE(CUDA QUIET REQUIRED)
 
-  endif()
+#
+# Platform-dependent section
+#
+IF( WIN32 )
+    MESSAGE(STATUS "MSVC_VERSION=${MSVC_VERSION}")
+    # 1600 = VS 10.0
+    # 1700 = VS 11.0
+    # 1800 = VS 12.0
 
-  # GCC configuration
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    #
+    # Custom Windows include and link dirs for my machine:
+    #
+    SET( LIBS_HOME "C:/lib" CACHE STRING "Location of support libraries Glut, Glew and others"  )
 
-    set(GCC_CXX_FLAGS "-std=gnu++11 -m64")
+    SET( GLM_ROOT "${LIBS_HOME}/glm-0.9.5.4/glm" CACHE STRING "glm root" )
+    INCLUDE_DIRECTORIES( "${GLM_ROOT}" )
+    ADD_DEFINITIONS( -DGLM_FORCE_RADIANS )
 
-    if(BUILD_DEBUG)
-      set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
-    endif(BUILD_DEBUG)
+    IF( GL_FRAMEWORK STREQUAL "GLFW" )
+        MESSAGE("Using GLFW Framework.")
+        IF( MSVC_VERSION STREQUAL "1600" ) # VS 2010
+            SET( GLFW3_ROOT "${LIBS_HOME}/glfw-3.1.bin.WIN32" CACHE STRING "glfw root" )
+            LINK_DIRECTORIES( "${GLFW3_ROOT}/lib-vc2010" )
+        ELSEIF( MSVC_VERSION STREQUAL "1700" )
+            SET( GLFW3_ROOT "${LIBS_HOME}/glfw-3.1.bin.WIN32" CACHE STRING "glfw root" )
+            LINK_DIRECTORIES( "${GLFW3_ROOT}/lib-vc2012" )
+        ELSEIF( MSVC_VERSION STREQUAL "1800" )
+            SET( GLFW3_ROOT "${LIBS_HOME}/glfw-3.1.bin.WIN32" CACHE STRING "glfw root" )
+            LINK_DIRECTORIES( "${GLFW3_ROOT}/lib-vc2013" )
+        ENDIF()
+        INCLUDE_DIRECTORIES( "${GLFW3_ROOT}/include" )
+        SET( FRAMEWORK_LIBS glfw3.lib )
+    ELSEIF( GL_FRAMEWORK STREQUAL "SDL" )
+        MESSAGE("Using SDL2 Framework.")
+        SET( SDL2_ROOT "${LIBS_HOME}/SDL2-2.0.3" CACHE STRING "SDL2 root" )
+        INCLUDE_DIRECTORIES( "${SDL2_ROOT}/include" )
+        LINK_DIRECTORIES   ( "${SDL2_ROOT}/lib/x86" )
+        SET( FRAMEWORK_LIBS SDL2.lib )
+    ELSEIF( GL_FRAMEWORK STREQUAL "SFML" )
+        SET( SFML_ROOT "${LIBS_HOME}/SFML-2.2" CACHE STRING "SFML root" )
+        INCLUDE_DIRECTORIES( "${SFML_ROOT}/include" )
+        LINK_DIRECTORIES   ( "${SFML_ROOT}/lib" )
+        SET( FRAMEWORK_LIBS sfml-main.lib sfml-system.lib sfml-window.lib )
+    ELSE()
+        MESSAGE("Unknown GL_FRAMEWORK: choose GLFW, SDL or SFML.")
+    ENDIF()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
+    SET( GLEW_ROOT "${LIBS_HOME}/glew-1.12.0" CACHE STRING "glew root" )
+    INCLUDE_DIRECTORIES( "${GLEW_ROOT}/include" )
+    LINK_DIRECTORIES   ( "${GLEW_ROOT}/lib/Release/Win32" )
+    ADD_DEFINITIONS( -DGLEW_STATIC )
 
-  endif()
+    IF( USE_OCULUSSDK )
+        # TODO: the logic here needs work, OVR SDK dir is kept in cache until manually changed
+        IF( OVRSDK_VERSION STREQUAL "05" )
+            SET( OCULUSSDK_ROOT "${LIBS_HOME}/OculusSDK-0.5.0.1" CACHE STRING "OculusSDK root" )
+            ADD_DEFINITIONS( -DOVRSDK05 )
+        ELSEIF( OVRSDK_VERSION STREQUAL "06" )
+            SET( OCULUSSDK_ROOT "${LIBS_HOME}/OculusSDK-0.6.0.0" CACHE STRING "OculusSDK root" )
+            ADD_DEFINITIONS( -DOVRSDK06 )
+        ELSEIF( OVRSDK_VERSION STREQUAL "07" )
+            SET( OCULUSSDK_ROOT "${LIBS_HOME}/OculusSDK-0.7.0.0" CACHE STRING "OculusSDK root" )
+            ADD_DEFINITIONS( -DOVRSDK07 )
+        ELSEIF( OVRSDK_VERSION STREQUAL "08" )
+            SET( OCULUSSDK_ROOT "${LIBS_HOME}/OculusSDK" CACHE STRING "OculusSDK root" )
+            ADD_DEFINITIONS( -DOVRSDK08 )
+        ELSE()
+            MESSAGE("Unknown OVR SDK version.")
+        ENDIF()
 
-endif(APPLE)
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Include" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Src" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVRKernel/Src" )
+        IF( MSVC_VERSION STREQUAL "1600" )
+            IF( DEBUG )
+                LINK_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Lib/Windows/Win32/Debug/VS2010" )
+            ELSE()
+                LINK_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Lib/Windows/Win32/Release/VS2010" )
+            ENDIF()
+        ELSEIF( MSVC_VERSION STREQUAL "1700" )
+            IF( DEBUG )
+                LINK_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Lib/Windows/Win32/Debug/VS2012" )
+            ELSE()
+                LINK_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Lib/Windows/Win32/Release/VS2012" )
+            ENDIF()
+        ELSEIF( MSVC_VERSION STREQUAL "1800" )
+            IF( DEBUG )
+                LINK_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Lib/Windows/Win32/Debug/VS2013" )
+            ELSE()
+                LINK_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Lib/Windows/Win32/Release/VS2013" )
+            ENDIF()
+        ENDIF()
+        SET( OVR_LIBS LibOVR.lib )
+        ADD_DEFINITIONS( -DUSE_OCULUSSDK )
+    ENDIF( USE_OCULUSSDK )
 
-##################
-# Build on Linux #
-##################
-set(LINUX UNIX AND NOT APPLE)
-if(LINUX)
+    IF( USE_OSVR )
+        SET( OSVR_ROOT "${LIBS_HOME}/OSVR-Core-Snapshot-v0.2-338-ga848a4c-build122-vs12-32bit" CACHE STRING "OSVR root" )
+        INCLUDE_DIRECTORIES( "${OSVR_ROOT}/include" )
+        LINK_DIRECTORIES   ( "${OSVR_ROOT}/lib" )
+        SET( OSVR_LIBS osvrClientKit.lib )
+        INCLUDE_DIRECTORIES( "${LIBS_HOME}/boost_1_58_0" )
+        ADD_DEFINITIONS( -DUSE_OSVR )
+    ENDIF( USE_OSVR )
 
-  # GCC only
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    SET( PLATFORM_LIBS
+        ${FRAMEWORK_LIBS}
+        opengl32.lib glu32.lib glew32s.lib
+        ${OVR_LIBS}
+        ${OSVR_LIBS}
+        Winmm.lib
+        ws2_32.lib
+        ${HYDRA_LIBS}
+        ${ANT_LIBS}
+        )
 
-    set(GCC_CXX_FLAGS "-std=c++11 -m64")
+    ADD_DEFINITIONS( /W4 -D_CRT_SECURE_NO_WARNINGS )
 
-    # X11 Dependencies
-    if(NOT BUILD_LIBCMU462)
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXi")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXxf86vm")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXinerama")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXcursor")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXfixes")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXrandr")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXext")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXrender")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lX11")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lpthread")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lxcb")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXau")
-    endif()
+    # These lines will silence some linker warnings on VS2010,
+    # but also remove debug info from the debug build.
+    #SET( CMAKE_EXE_LINKER_FLAGS /NODEFAULTLIB:\"libcmt.lib\" )
+    #SET( CMAKE_EXE_LINKER_FLAGS_DEBUG /NODEFAULTLIB:\"msvcrt.lib\" )
 
-    # Debug configuration
-    if(BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
-    endif(BUILD_DEBUG)
+    # Copy DLLs of the included libraries into output directories.
+    INVOKEPYTHON( "tools/copyDLLs.py"
+        ${PROJECT_SOURCE_DIR}
+        ${PROJECT_BINARY_DIR}
+        "ANTTWEAKBAR_ROOT=${ANTTWEAKBAR_ROOT}"
+        "OCULUSSDK_ROOT=${OCULUSSDK_ROOT}"
+        "SIXENSE_ROOT=${SIXENSE_ROOT}"
+        "GLEW_ROOT=${GLEW_ROOT}"
+        "SDL2_ROOT=${SDL2_ROOT}"
+        "SFML_ROOT=${SFML_ROOT}"
+        )
+ELSEIF( APPLE )
+    ADD_DEFINITIONS( -D_MACOS )
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
+    # Todo - build OVR with RTTI support
+    SET(CMAKE_CXX_FLAGS "-fno-rtti")
 
-  endif()
+    SET( LIBS_HOME "~/Development/" )
+    SET( OCULUSSDK_ROOT "${LIBS_HOME}/OculusSDK" )
 
-endif(LINUX)
+    INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
+    FIND_LIBRARY(COCOA_LIBRARY Cocoa)
+    FIND_LIBRARY(IOKIT_LIBRARY IOKit)
+    FIND_LIBRARY(GLUT_LIBRARY GLUT )
+    FIND_LIBRARY(OVR_LIBRARY NAMES LibOVR PATHS ${OCULUSSDK_ROOT}/LibOVR/Lib/Mac/Release NO_DEFAULT_PATH)
+    FIND_LIBRARY(OpenGL_LIBRARY OpenGL )
+    MARK_AS_ADVANCED (COCOA_LIBRARY
+                      GLUT_LIBRARY
+                      IOKIT_LIBRARY
+                      OpenGL_LIBRARY
+                      OVR_LIBRARY)
+    INCLUDE_DIRECTORIES( "/opt/local/include/" )
+    LINK_DIRECTORIES   ( "/opt/local/lib" )
 
-####################
-# Build on Windows #
-####################
-if(WIN32)
+    SET( GLM_ROOT "${LIBS_HOME}/glm-0.9.5.4/glm" CACHE STRING "glm root" )
+    INCLUDE_DIRECTORIES( "${GLM_ROOT}" )
+    ADD_DEFINITIONS( -DGLM_FORCE_RADIANS )
 
-  if(MSVC)
+    IF( USE_OCULUSSDK )
+        SET( OCULUSSDK_ROOT "${LIBS_HOME}/OculusSDK" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Include" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Src" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVRKernel/Src" )
+        ADD_DEFINITIONS( -DOVR_OS_MAC )
+        ADD_DEFINITIONS( -DUSE_OCULUSSDK )
+    ENDIF( USE_OCULUSSDK )
 
-    set(MSVC_CXX_FLAGS "-std=gnu++11")
+    #SET( PLATFORM_LIBS libovr.a ${COCOA_LIBRARY} ${IOKIT_LIBRARY} )
+    SET( PLATFORM_LIBS
+        ${FRAMEWORK_LIBS}
+        ${COCOA_LIBRARY}
+        ${IOKIT_LIBRARY}
+        ${GLUT_LIBRARY}
+        ${OpenGL_LIBRARY}
+        ${OVR_LIBRARY}
+        -lGLEW
+        -lglfw
+        ${HYDRA_LIBS}
+        ${ANT_LIBS}
+        )
+        # TODO: SDL2 or glfw
 
-    if(BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-    endif(BUILD_DEBUG)
+ELSEIF( UNIX )
+    ADD_DEFINITIONS( -D_UNIX )
+    IF( CMAKE_SYSTEM_NAME STREQUAL "Linux" )
+        ADD_DEFINITIONS( -D_LINUX )
+    ELSEIF( CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" )
+        ADD_DEFINITIONS( -D_FREEBSD )
+        INCLUDE_DIRECTORIES( /usr/local/include )
+        LINK_DIRECTORIES( /usr/local/lib )
+    ENDIF()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
+    SET( LIBS_HOME "~/lib" )
 
-  endif(MSVC)
+    ADD_DEFINITIONS( -D_DEBUG )
+    SET(CMAKE_CXX_FLAGS "-ggdb --std=c++11")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
 
-  if(MINGW)
+    SET( GLM_ROOT "${LIBS_HOME}/glm-0.9.5.4/glm" CACHE STRING "glm root" )
+    INCLUDE_DIRECTORIES( "${GLM_ROOT}" )
+    ADD_DEFINITIONS( -DGLM_FORCE_RADIANS )
 
-    set(MSVC_CXX_FLAGS "-std=gnu++11")
 
-    if(BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-    endif(BUILD_DEBUG)
+    IF( GL_FRAMEWORK STREQUAL "GLFW" )
+        MESSAGE("Using GLFW Framework.")
+        INCLUDE_DIRECTORIES( "/usr/local/include/GLFW" )
+        SET( FRAMEWORK_LIBS -lglfw )
+    ELSEIF( GL_FRAMEWORK STREQUAL "SDL" )
+        MESSAGE("Using SDL2 Framework.")
+        INCLUDE_DIRECTORIES( "/usr/local/include/SDL2" "/usr/include/SDL2/" )
+        LINK_DIRECTORIES   ( "/usr/local/lib/" )
+        SET( FRAMEWORK_LIBS -lSDL2 )
+    ELSEIF( GL_FRAMEWORK STREQUAL "SFML" )
+        MESSAGE("Using SFML Framework.")
+        SET( FRAMEWORK_LIBS -lsfml-graphics -lsfml-window -lsfml-system )
+    ELSE()
+        MESSAGE("Unknown GL_FRAMEWORK: choose GLFW, SDL or SFML.")
+    ENDIF()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
+    IF( USE_OCULUSSDK )
+        SET( OCULUSSDK_ROOT "${LIBS_HOME}/ovr_sdk_linux_0.5.0.1" CACHE STRING "OculusSDK root" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Include" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVR/Src" )
+        INCLUDE_DIRECTORIES( "${OCULUSSDK_ROOT}/LibOVRKernel/Src" )
+        LINK_DIRECTORIES   ( "${OCULUSSDK_ROOT}/LibOVR/Lib/Linux/x86_64/Release/" )
+        SET( OVR_LIBS -lOVR -ldl -ludev -lXinerama )
+        ADD_DEFINITIONS( -DOVRSDK05 ) # The only option for now
+        ADD_DEFINITIONS( -DUSE_OCULUSSDK )
+    ENDIF( USE_OCULUSSDK )
 
-  endif(MINGW)
+    IF( USE_OSVR )
+        SET( OSVR_ROOT "${LIBS_HOME}" CACHE STRING "OSVR root" )
+        INCLUDE_DIRECTORIES( "${OSVR_ROOT}/include" )
+        LINK_DIRECTORIES   ( "${OSVR_ROOT}/lib" )
+        SET( OSVR_LIBS -losvrClientKit )
+        ADD_DEFINITIONS( -DUSE_OSVR )
+    ENDIF( USE_OSVR )
 
-endif(WIN32)
+    find_package(OpenGL REQUIRED)
+    include_directories( ${OPENGL_INCLUDE_DIRS} )
 
-#-------------------------------------------------------------------------------
-# Find dependencies
-#-------------------------------------------------------------------------------
+    include_directories( src/VRRayTracing/src )
+    include_directories( src/VRRayTracing/CMU462/include )
+    link_directories( src )
 
-# Required packages
-find_package(OpenGL REQUIRED)
-find_package(Threads REQUIRED)
-find_package(Freetype REQUIRED)
+    SET( PLATFORM_LIBS
+        ${OVR_LIBS}
+        ${OSVR_LIBS}
+        -lGLEW
+        -lGL
+        -lGLU
+        ${FRAMEWORK_LIBS}
+        -pthread
+        -lgomp
+        -lCMU462
+        -lpathtracer
+        -lrt
+        -lXrandr
+        -lXxf86vm
+        -lXi
+        -lX11
+        -lXinerama # GLFW 3.1
+        -lXcursor # GLFW 3.1
+	#-ldl
+        ${HYDRA_LIBS}
+        ${ANT_LIBS}
+        )
 
-# CMU462
-if(BUILD_LIBCMU462)
-  add_subdirectory(CMU462)
-  include_directories(CMU462/include)
-else(BUILD_LIBCMU462)
-  find_package(CMU462 REQUIRED)
-  find_package(GLEW REQUIRED)
-  find_package(GLFW REQUIRED)
-endif(BUILD_LIBCMU462)
+ENDIF()
 
-#-------------------------------------------------------------------------------
-# Add subdirectories
-#-------------------------------------------------------------------------------
-add_subdirectory(src)
 
-# build documentation
-if(BUILD_DOCS)
-  find_package(DOXYGEN)
-  if(DOXYGEN_FOUND AND BUILD_DOCS)
-    add_subdirectory(docs)
-  endif()
-endif()
+#
+# Platform-independent section
+#
+FILE( GLOB_RECURSE UTIL_SOURCE_FILES
+    src/Util/*.cpp
+    src/Util/*.h
+    )
 
-# Install settings
-set(CMAKE_INSTALL_PREFIX "${PathTracer_SOURCE_DIR}/")
+FILE( GLOB_RECURSE APPSKELETON_SOURCE_FILES
+    src/AppSkeleton/*.cpp
+    src/AppSkeleton/*.h
+    )
+
+FILE( GLOB_RECURSE SCENE_SOURCE_FILES
+    src/Scene/*.cu
+    src/Scene/*.cpp
+    src/Scene/*.h
+    )
+
+FILE( GLOB_RECURSE FLYINGMOUSE_SOURCE_FILES
+    src/FlyingMouse/*.cpp
+    src/FlyingMouse/*.h
+    )
+
+# Manually exclude the OVR-dependent files from file lists.
+IF( NOT USE_OCULUSSDK )
+    MESSAGE( "Removing OVR-dependent files..." )
+
+    LIST(REMOVE_ITEM APPSKELETON_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK05AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK06AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK07AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK08AppSkeleton.cpp
+        )
+
+    LIST(REMOVE_ITEM SCENE_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Scene/OVRScene.cpp )
+ENDIF()
+
+IF( NOT USE_OSVR )
+    MESSAGE( "Removing OSVR-dependent files..." )
+    LIST(REMOVE_ITEM APPSKELETON_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OsvrAppSkeleton.cpp )
+ENDIF()
+
+# Manually exclude non-selected OVR SDK Skeleton classes
+IF( OVRSDK_VERSION STREQUAL "05" )
+    MESSAGE( "Removing non-OVRSDK05 files..." )
+    LIST(REMOVE_ITEM APPSKELETON_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK06AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK07AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK08AppSkeleton.cpp
+        )
+ELSEIF( OVRSDK_VERSION STREQUAL "06" )
+    MESSAGE( "Removing non-OVRSDK06 files..." )
+    LIST(REMOVE_ITEM APPSKELETON_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK05AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK07AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK08AppSkeleton.cpp
+        )
+ELSEIF( OVRSDK_VERSION STREQUAL "07" )
+    MESSAGE( "Removing non-OVRSDK07 files..." )
+    LIST(REMOVE_ITEM APPSKELETON_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK05AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK06AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK08AppSkeleton.cpp
+        )
+    LIST(REMOVE_ITEM SCENE_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Scene/OVRScene.cpp
+        )
+ELSEIF( OVRSDK_VERSION STREQUAL "08" )
+    MESSAGE( "Removing non-OVRSDK08 files..." )
+    LIST(REMOVE_ITEM APPSKELETON_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK05AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK06AppSkeleton.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/AppSkeleton/OVRSDK07AppSkeleton.cpp
+        )
+    LIST(REMOVE_ITEM SCENE_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Scene/OVRScene.cpp
+        )
+ENDIF()
+
+INCLUDE_DIRECTORIES("src/Util")
+INCLUDE_DIRECTORIES("src/Util/GL")
+INCLUDE_DIRECTORIES("src/AppSkeleton")
+INCLUDE_DIRECTORIES("src/Scene")
+INCLUDE_DIRECTORIES("src/FlyingMouse")
+INCLUDE_DIRECTORIES("src/VRRayTracer")
+
+CUDA_ADD_LIBRARY( Util        ${UTIL_SOURCE_FILES} )
+CUDA_ADD_LIBRARY( AppSkeleton ${APPSKELETON_SOURCE_FILES} )
+CUDA_ADD_LIBRARY( Scene       ${SCENE_SOURCE_FILES} )
+CUDA_ADD_LIBRARY( FlyingMouse ${FLYINGMOUSE_SOURCE_FILES} )
+
+#
+# Some convoluted logic here to choose one of several main source files:
+# Since the OVR 06 SDK changes the way main handles the AppSkeleton, there is a main
+# file for each windowing system(GLFW,SDL) and SDK version(05,06).
+#
+IF( GL_FRAMEWORK STREQUAL "GLFW" )
+    IF( OVRSDK_VERSION STREQUAL "05" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/glfw_main.cpp )
+    ELSEIF( OVRSDK_VERSION STREQUAL "06" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/glfw_sdk06_main.cpp )
+    ELSEIF( OVRSDK_VERSION STREQUAL "07" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/glfw_sdk06_main.cpp )
+    ELSEIF( OVRSDK_VERSION STREQUAL "08" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/glfw_sdk06_main.cpp )
+    ENDIF()
+ELSEIF( GL_FRAMEWORK STREQUAL "SDL" )
+    IF( OVRSDK_VERSION STREQUAL "05" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/sdl_main.cpp )
+    ELSEIF( OVRSDK_VERSION STREQUAL "06" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/sdl_sdk06_main.cpp )
+    ELSEIF( OVRSDK_VERSION STREQUAL "07" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/sdl_sdk06_main.cpp )
+    ELSEIF( OVRSDK_VERSION STREQUAL "08" )
+        CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/sdl_sdk06_main.cpp )
+    ENDIF()
+ELSEIF( GL_FRAMEWORK STREQUAL "SFML" )
+    CUDA_ADD_EXECUTABLE( ${PROJECT_NAME} src/sfml_main.cpp )
+ENDIF()
+
+TARGET_LINK_LIBRARIES( ${PROJECT_NAME}
+    AppSkeleton
+    Scene
+    Util
+    FlyingMouse
+    CMU462
+    pathtracer
+    ${PLATFORM_LIBS}
+    )
+
+INCLUDE_DIRECTORIES( "/usr/include/CUDA" )
+INCLUDE_DIRECTORIES( "/usr/include/CUDA_EXTRA" )
+

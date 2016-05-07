@@ -1,0 +1,135 @@
+RiftSkel-testlogs.txt
+
+Test Matrix Dimensions:
+CPU: Intel, AMD, ARM
+ OS: Win7, Win8, Linux, MacOS
+  GPU: AMD, NVIDIA, Qualcomm
+   Driver Version
+    HMD: DK1, DK2, DebugHMD
+     Display Mode: Direct, Extended, Windowed
+      Framework: GLFW3, SDL2, SFML
+       GL: CoreContext, CompatContext
+        Render Path: SDK, Client
+         Build Configuration: Debug, Release
+          Debugger attached, not attached
+
+
+Intel i7 920
+Win 7 Pro
+  NVidia 780 Ti
+  Driver 347.09
+    DK2
+      SDL2 - works
+      GLFW3 - works
+      SFML
+        DebugHMD - works
+        Extended
+          SDK
+          Client - works, vsync defaulting off
+        Direct
+          SDK - broken, appears to freeze with <1fps
+          Client - works
+
+AMD Phenom II X4 965 3.4 GHZ
+Win 7 Pro
+  AMD Radeon HD 6670
+  Driver 14.301.1001-.....OpenGL 6.14.10.13084
+    DK1 - test scene does not work in Direct mode, display gets no signal
+      AntTweakBar off
+      SDL2
+        DebugHMD
+          CRASH sdl_main.cpp:646
+          g_HMDglContext = SDL_GL_CreateContext(g_pHMDWindow);
+        Extended
+          SDK
+            crashes on glBindVertexArray()
+          Client
+            works fine, vsync toggle works - off yields noticeably less latency
+        Direct
+          CRASH sdl_main.cpp:646
+          g_HMDglContext = SDL_GL_CreateContext(g_pHMDWindow);
+      GLFW
+        DebugHMD
+          SDK
+            A clear appears to be failing on rendertarget
+            Any pixel without depth written to it after a clear is smeared
+          Client - looks fine, no vsync control
+        Extended
+          SDK
+            Compat
+              smearing artifact feels odd in HMD - color buffer fails to clear
+            Core
+              depth buffer smears as well
+
+              CRASH in ovrHmd_EndFrame(m_Hmd, renderPose, eyeTexture);
+              CAPI_GL_DistortionRenderer.cpp:369
+              BOOL success = SwapBuffers(dc);
+          Client
+            works great, sustained 750fps, vsync won't turn on
+        Direct
+          SDK
+            CRASH in ovrHmd_EndFrame()
+          Client
+             crashes at glfw_main.cpp:620 glfwSwapBuffers(g_pHMDWindow);
+
+    DK2 - test scene works in direct and extended
+      AntTweakBar off
+      GLFW
+        DebugHMD
+          SDK
+            smearing, or crash in BindVao depending on when render mode is switched
+            getting a GLError: invalid value
+            Could DismissInternal be deleting an incorrect VAO?
+          Client
+            works fine, VSync appears to have no effect
+        Extended
+          SDK
+            looks OK when HSW is up, display won't refresh after it's dismissed until eventually, crash
+          Client
+            works, but very juddery
+            VSync appears to stay off regardless of toggle, ~250 FPS
+        Direct
+          SDK, Client
+            crashes at glfw_main.cpp:620 glfwSwapBuffers(g_pHMDWindow);
+      SDL2
+        DebugHMD
+            SDK - crash in bindVAO, invalid operation
+            Client - works fine
+        Extended
+          SDK
+            get a GL Error: invalid operation on (maybe) the first VAO bind after DismissHSW
+            Turn on vsync, wait until frame rate increases from 33 to 66(for only one reading), then switch: no GL error
+          Client
+            works, but very juddery
+            VSync toggle appears to work, but yields sustained 33fps on, 250 off
+        Direct
+          SDK, Client
+            crashes at sdl_main.cpp:646  g_HMDglContext = SDL_GL_CreateContext(g_pHMDWindow);
+
+Linux mahler 3.13.0-37-generic #64-Ubuntu SMP x86_64 GNU/Linux
+GeForce GTX 275
+AMD Sempron(tm) 140 Processor
+NVIDIA-SMI 331.38     Driver Version: 331.38
+  SDL2
+    Throws GLXBadDrawable on exit(full text below***)
+    DebugHMD
+      works fine
+    Extended
+      SDK, Client
+        turn off Ubuntu Launcher placement on all screens in System Settings->Display
+        very juddery, timer also seems off
+  GLFW
+    Takes a long time to quit
+    DebugHMD
+      works fine
+    Extended
+      Window only created at half width(one eye)
+
+
+***
+Error: [Context] Unable to obtain x11 visual from context
+X Error of failed request:  GLXBadDrawable
+  Major opcode of failed request:  155 (GLX)
+  Minor opcode of failed request:  5 (X_GLXMakeCurrent)
+  Serial number of failed request:  7797
+  Current serial number in output stream:  7797
