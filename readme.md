@@ -1,6 +1,13 @@
 # GPU Accelerated RayTracing for VR
 Chris Kaffine and Zach Shearer
 
+##Parallelism Competition Update
+At this point in time, we've implemented a more intelligent GPU raytracer, with an improved BVH traversal method, where all threads in a warp traverse until they reach a leaf. At that time, they all check over all primitives in the leaf, which improved performance on scenes with larger BVHs, as it helps reduce divergent execution. We did extensive performance analysis to determine the main bottlenecks of the naive raytracing implementation, and found that the largest was the ray-triangle intersection code. This was because it generated a large number of non-contiguous memory requests, which while it didn't approach the maximum bandwidth, the sheer volume created some issues with latency. To fix this, we've altered some of our data structures to help, and be able to utilize vector load instructions. Additionally, we've moved some of these to shared memory, and making a change from arrays of structures to structures of arrays. We also determined that the number of registers required by our kernel was limiting the occupancy of the kernel on the device, which reduced our latency hiding ability. To combat this, we determined what the best number of registers to use in our kernel was, and forced CUDA to use that number instead.
+With all of these optimizations, we've acheived around a 6x speedup over our naive GPU implementation. Additionally, this has given us roughly a 30x speedup over our multithreaded (no SIMD) CPU implementation running on 8 threads.
+
+Upon testing on the actual Oculus hardware, everything is perfectly functional. Although, performance is not where we'd like it to be, and we believe that to be because of the less powerful GPU in our personal computers, which is all we can currently run the Oculus on. However, we did find that rendering to the Oculus uses a small amount of overhead, and rendering speeds are very similar to when we run the tests in headless mode, which is a promising result. 
+
+
 ##Checkpoint Summary
 So far what we've completed is a functional, albeit unoptimized and slow raytracer in CUDA, and a functioning Oculus/OpenGL environment that's capable of interacting with CUDA code. At this time, the two are still separate tasks, and because of this, the code isn't on this page yet. We ran into some issues with getting the Oculus to work at first, like that our testing laptop's video card doesn't support any version of the SDK after 0.7, and then getting a reasonable development environment working on Windows. In the end, for ease of development, we rolled back to using an older version of the SDK that supports linux, and moving development over to a linux environment.
 
