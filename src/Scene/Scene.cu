@@ -1,6 +1,4 @@
 // Scene.cpp
-#include "pathtracer.h"
-#include <gpu/bvhGPU.h>
 #include "Scene.h"
 
 #ifdef __APPLE__
@@ -50,6 +48,7 @@
 #endif
 
 extern __constant__ VRRT::constantParams cuGlobals;
+extern __constant__ VRRT::SceneLight *cuLights;
 
 inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=true) {
   if (code != cudaSuccess) {
@@ -113,8 +112,8 @@ void Scene::initCuda() {
   printf("Done!\n");
 
   printf("Transferring lights over...\n");
-  cudaCheckError(cudaMalloc(&lights, sizeof(VRRT::SceneLight) * app->scene->lights.size()));
-  cudaCheckError(cudaMemcpy(lights, app->scene->lights.data(), sizeof(VRRT::SceneLight) * app->scene->lights.size(), cudaMemcpyHostToDevice));
+  cudaCheckError( cudaMemcpyToSymbol(cuLights, app->scene->lights.data(),
+                                     sizeof(VRRT::SceneLight) * app->scene->lights.size()) );
   printf("Done!\n");
 }
 
@@ -175,15 +174,12 @@ void Scene::runStep(char *fname) {
   image_h = 1080 / SCALE;
   image_w = 960 / SCALE;
   cudaCheckError(cudaMalloc(&devOutput, 4*image_h*image_w));
-  VRRT::initBuffer<<<gridDim, blockDim>>>(devOutput, image_h, image_w);
+  VRRT::initBuffer<<<gridDim, blockDim>>>(devOutput);
   cudaCheckError(cudaGetLastError());
   cudaCheckError(cudaDeviceSynchronize());
 
-  VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera,
-                                              lights, app->scene->lights.size(),
-                                              bvh, image_h, image_w,
-                                              app->ns_aa, app->ns_area_light,
-                                              app->max_ray_depth, state);
+  VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera, bvh,
+                                              state);
   cudaCheckError(cudaGetLastError());
   cudaCheckError(cudaDeviceSynchronize());
 
@@ -216,11 +212,8 @@ void Scene::timestep(double /*absTime*/, double dt) {
 //  cudaCheckError(cudaDeviceSynchronize());
 
   // Actually run the raytracer...
-  VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera,
-                                              lights, app->scene->lights.size(),
-                                              bvh, image_h, image_w,
-                                              app->ns_aa, app->ns_area_light,
-                                              app->max_ray_depth, state);
+  VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera, bvh,
+                                              state);
 
   cudaCheckError(cudaGetLastError());
   cudaCheckError(cudaDeviceSynchronize());

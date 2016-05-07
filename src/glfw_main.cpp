@@ -35,8 +35,6 @@
 
 #include <unistd.h>
 
-#include "Scene/pathtracer.h"
-
 #include <CMU462/CMU462.h>
 #include <CMU462/viewer.h>
 
@@ -108,6 +106,19 @@ TwBar* g_pTweakbar = NULL;
 
 GLFWwindow* initializeAuxiliaryWindow(GLFWwindow* pRiftWindow);
 void destroyAuxiliaryWindow(GLFWwindow* pAuxWindow);
+
+void usage(const char* binaryName) {
+  printf("Usage: %s [options] <scenefile>\n", binaryName);
+  printf("Program Options:\n");
+  printf("  -s  <INT>        Number of camera rays per pixel\n");
+  printf("  -l  <INT>        Number of samples per area light\n");
+  printf("  -t  <INT>        Number of render threads\n");
+  printf("  -m  <INT>        Maximum ray depth\n");
+  printf("  -e  <PATH>       Path to environment map\n");
+  printf("  -b  <INT>        Number of rays to run benchmark on\n");
+  printf("  -h               Print this help message\n");
+  printf("\n");
+}
 
 // Set VSync is framework-dependent and has to come before the include
 ///@param state 0=off, 1=on, -1=adaptive

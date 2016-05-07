@@ -121,7 +121,7 @@ __device__ Spectrum trace_ray(Ray r, BVHGPU *bvh, curandState *state,
   }
 }
 
-__global__ void raytrace_pixel(unsigned int *img, CMU462::Camera c, BVHGPU bvh,
+__global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c, BVHGPU bvh,
                                curandState *state)
 {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -142,17 +142,11 @@ __global__ void raytrace_pixel(unsigned int *img, CMU462::Camera c, BVHGPU bvh,
     Ray r = c.generate_ray((x + 0.5) / cuGlobals.w, (y + 0.5) / cuGlobals.h);
     total = trace_ray(r, &bvh, &localState, true);
   }
-  int ind = (x + y * cuGlobals.w);
-  //weird union stuff to make sure all 4 bytes are copied over at once
-  union {
-    unsigned char channels[4];
-    unsigned int p;
-  };
-  channels[0] = colorToChar(total.r);
-  channels[1] = colorToChar(total.g);
-  channels[2] = colorToChar(total.b);
-  channels[3] = 255;
-  img[ind] = p;
+  int ind = 4 * (x + y * cuGlobals.w);
+  img[ind] = colorToChar(total.r);
+  img[ind + 1] = colorToChar(total.g);
+  img[ind + 2] = colorToChar(total.b);
+  img[ind + 3] = 255;
   //state[id] = localState;
 }
 
@@ -164,19 +158,14 @@ __global__ void initCurand(curandState *state)
   curand_init(1234, ind, 0, &state[ind]);
 }
 
-__global__ void initBuffer(unsigned int *outBuffer)
+__global__ void initBuffer(unsigned char *outBuffer)
 {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int y = blockIdx.y * blockDim.y + threadIdx.y;
   if (x >= cuGlobals.w || y >= cuGlobals.h) return;
-  union {
-    unsigned char channels[4];
-    unsigned int p;
-  };
   for (int i = 0; i < 4; i++) {
-    channels[i] = 255*(i==3);
+    outBuffer[4*(x + cuGlobals.w * y) + i] = 255*(i==3);
   }
-  outBuffer[x + cuGlobals.w * y] = p;
 }
 
 void setup()
@@ -212,11 +201,11 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   dim3 blockDim(256);
   dim3 gridDim((screenW + blockDim.x - 1) / blockDim.x,
                (screenH + blockDim.y - 1) / blockDim.y);
-  unsigned int *outBuffer;
+  unsigned char *outBuffer;
   unsigned char *frame_out = new unsigned char[4*screenW*screenH];
 
   //initialize output buffer on GPU
-  cudaCheckError( cudaMalloc(&outBuffer, sizeof(unsigned int) * screenW * screenH) );
+  cudaCheckError( cudaMalloc(&outBuffer, sizeof(unsigned char) * 4 * screenW * screenH) );
   initBuffer<<<gridDim, blockDim>>>(outBuffer);
   cudaCheckError( cudaGetLastError() );
   cudaCheckError( cudaDeviceSynchronize() );
@@ -273,7 +262,19 @@ void raytrace_scene(CMU462::Camera *c, CMU462::StaticScene::Scene *scene,
   std::cout << "Done! (" << end - start << " sec)\n";
 
   //copy image into CPU buffer
-  cudaCheckError( cudaMemcpy(frame_out, outBuffer, sizeof(int)*screenW*screenH, cudaMemcpyDeviceToHost) );
+  cudaCheckError( cudaMemcpy(frame_out, outBuffer, sizeof(unsigned char)*4*screenW*screenH, cudaMemcpyDeviceToHost) );
+
+  for (int i = 0; i < screenH / 2; i++) {
+    for (int j = 0; j < screenW; j++) {
+      int ind1 = 4 * (j + screenW * i);
+      int ind2 = 4 * (j + screenW * (screenH - i));
+      for (int n = 0; n < 4; n++) {
+        unsigned char tmp = frame_out[ind1 + n];
+        frame_out[ind1 + n] = frame_out[ind2 + n];
+        frame_out[ind2 + n] = tmp;
+      }
+    }
+  }
 
   //write image to file
   lodepng::encode(fname, frame_out, screenW, screenH);

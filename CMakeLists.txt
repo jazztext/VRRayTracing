@@ -245,7 +245,7 @@ ELSEIF( UNIX )
     IF( GL_FRAMEWORK STREQUAL "GLFW" )
         MESSAGE("Using GLFW Framework.")
         INCLUDE_DIRECTORIES( "/usr/local/include/GLFW" )
-        SET( FRAMEWORK_LIBS -lglfw )
+        SET( FRAMEWORK_LIBS -lglfw3 )
     ELSEIF( GL_FRAMEWORK STREQUAL "SDL" )
         MESSAGE("Using SDL2 Framework.")
         INCLUDE_DIRECTORIES( "/usr/local/include/SDL2" "/usr/include/SDL2/" )
@@ -283,10 +283,12 @@ ELSEIF( UNIX )
     include_directories( src/pathtracer/src )
     include_directories( src/pathtracer/CMU462/include )
     link_directories( ${PROJECT_SOURCE_DIR} )
+    link_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
     SET( PLATFORM_LIBS
         ${OVR_LIBS}
         ${OSVR_LIBS}
+        -lc
         -lGLEW
         -lGL
         -lGLU
@@ -398,6 +400,8 @@ INCLUDE_DIRECTORIES("src/AppSkeleton")
 INCLUDE_DIRECTORIES("src/Scene")
 INCLUDE_DIRECTORIES("src/FlyingMouse")
 INCLUDE_DIRECTORIES("src/VRRayTracer")
+
+add_subdirectory("src/pathtracer")
 
 CUDA_ADD_LIBRARY( Util        ${UTIL_SOURCE_FILES} )
 CUDA_ADD_LIBRARY( AppSkeleton ${APPSKELETON_SOURCE_FILES} )

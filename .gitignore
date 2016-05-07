@@ -1,0 +1,6 @@
+build/
+*.a
+*.o
+*.ptx
+*.depend
+*.cmake

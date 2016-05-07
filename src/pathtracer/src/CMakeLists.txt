@@ -8,7 +8,7 @@ set(CUDA_BUILD_CUBIN ON)
 
 set(CUDA_NVCC_FLAGS
    ${CUDA_NVCC_FLAGS};
-   -gencode arch=compute_20,code=sm_35 -std=c++11 -rdc=true
+   -gencode arch=compute_20,code=sm_35 -rdc=true
 )
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3 -lineinfo -maxrregcount 64)
@@ -108,4 +108,4 @@ endif(APPLE)
 set(LIBRARY_OUTPUT_PATH ../../..)
 
 # Install to project root
-install(TARGETS pathtracer ARCHIVE DESTINATION ${PathTracer_SOURCE_DIR}/../../../..)
+install(TARGETS pathtracer ARCHIVE DESTINATION ${PROJECT_SOURCE_DIR})

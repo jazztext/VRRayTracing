@@ -1,2 +1,0 @@
-/usr/bin/ar cq libAppSkeleton.a  CMakeFiles/AppSkeleton.dir/src/AppSkeleton/AppSkeleton.cpp.o CMakeFiles/AppSkeleton.dir/src/AppSkeleton/OVRSDK05AppSkeleton.cpp.o CMakeFiles/AppSkeleton.dir/src/AppSkeleton/SpaceCursor.cpp.o
-/usr/bin/ranlib libAppSkeleton.a

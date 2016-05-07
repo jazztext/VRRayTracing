@@ -1,8 +1,10 @@
 // Scene.h
 
 #pragma once
-#include "pathtracer.h"
-#include "gpu/bvhGPU.h"
+#include <CMU462/CMU462.h>
+#include <gpu/pathtracer.h>
+#include <application.h>
+#include <gpu/bvhGPU.h>
 
 #ifdef _WIN32
 #  define WINDOWS_LEAN_AND_MEAN
@@ -54,8 +56,6 @@ public:
     int eye_w, eye_h;
     int image_w, image_h;
     GLuint outFbo;
-
-    VRRT::SceneLight *lights;
 
     cudaArray_t devRenderbuffer[2];
     unsigned char *devOutput;
