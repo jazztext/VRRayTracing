@@ -33,7 +33,7 @@
 #include <cuda_gl_interop.h>
 #include <cuda_profiler_api.h>
 
-//#include <helper_functions.h>
+#include <helper_functions.h>
 #include <helper_cuda.h>
 #include <helper_cuda_gl.h>
 
@@ -44,11 +44,8 @@
 #include "Logger.h"
 
 #ifndef SCALE
-#define SCALE 1
+#define SCALE 4
 #endif
-
-extern __constant__ VRRT::constantParams cuGlobals;
-extern __constant__ VRRT::SceneLight *cuLights;
 
 inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=true) {
   if (code != cudaSuccess) {
@@ -90,7 +87,8 @@ void Scene::initCuda() {
   params.h = image_h;
   params.points = points;
   params.normals = normals;
-  cudaCheckError( cudaMemcpyToSymbol(cuGlobals, &params, sizeof(VRRT::constantParams)) );
+  copyTocuGlobals(&params);
+//  cudaCheckError( cudaMemcpyToSymbol(cuGlobals, &params, sizeof(VRRT::constantParams)) );
 
 
   printf("Done!\n");
@@ -112,8 +110,9 @@ void Scene::initCuda() {
   printf("Done!\n");
 
   printf("Transferring lights over...\n");
-  cudaCheckError( cudaMemcpyToSymbol(cuLights, app->scene->lights.data(),
-                                     sizeof(VRRT::SceneLight) * app->scene->lights.size()) );
+  copyTocuLights(app->scene->lights.data(), app->scene->lights.size());
+//  cudaCheckError( cudaMemcpyToSymbol(cuLights, app->scene->lights.data(),
+//                                     sizeof(VRRT::SceneLight) * app->scene->lights.size()) );
   printf("Done!\n");
 }
 
@@ -207,9 +206,9 @@ void Scene::timestep(double /*absTime*/, double dt) {
   cudaCheckError(cudaDeviceSynchronize());
 
   // Actual computation
-//  VRRT::initBuffer<<<gridDim, blockDim>>>(devOutput, image_h, image_w);
-//  cudaCheckError(cudaGetLastError());
-//  cudaCheckError(cudaDeviceSynchronize());
+  VRRT::initBuffer<<<gridDim, blockDim>>>(devOutput);
+  cudaCheckError(cudaGetLastError());
+  cudaCheckError(cudaDeviceSynchronize());
 
   // Actually run the raytracer...
   VRRT::raytrace_pixel<<<gridDim, blockDim>>>(devOutput, app->camera, bvh,

@@ -34,6 +34,14 @@ __device__ inline unsigned char colorToChar(float c)
   else return (unsigned char) c;
 }
 
+void copyTocuGlobals(constantParams *params) {
+  cudaCheckError(cudaMemcpyToSymbol(cuGlobals, params, sizeof(constantParams)));
+}
+
+void copyTocuLights(SceneLight *lights, size_t size) {
+  cudaCheckError(cudaMemcpyToSymbol(cuLights, lights, sizeof(SceneLight)*size));
+}
+
 __device__ Spectrum trace_ray(Ray r, BVHGPU *bvh, curandState *state,
                               bool includeLe = false) {
   Spectrum total = Spectrum::make(0, 0, 0);

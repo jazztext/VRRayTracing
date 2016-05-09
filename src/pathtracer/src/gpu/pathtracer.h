@@ -13,6 +13,9 @@ struct constantParams {
   Vector3D *points, *normals;
 };
 
+void copyTocuGlobals(struct constantParams *params);
+void copyTocuLights(SceneLight *data, size_t size);
+
 __global__ void initCurand(curandState *state);
 
 __global__ void initBuffer(unsigned char *outBuffer);
