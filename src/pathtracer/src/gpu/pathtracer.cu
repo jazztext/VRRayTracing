@@ -20,6 +20,8 @@
 #include <cuda_profiler_api.h>
 
 #define MAX_LIGHTS 10
+#define PERIPHERAL_QUALITY 2
+#define PERIPHERAL_BOUND 3
 
 namespace VRRT {
 
@@ -132,11 +134,19 @@ __device__ Spectrum trace_ray(Ray r, BVHGPU *bvh, curandState *state,
 __global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c, BVHGPU bvh,
                                curandState *state)
 {
+
+
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int y = blockIdx.y * blockDim.y + threadIdx.y;
   if (x >= cuGlobals.w || y >= cuGlobals.h) return;
+  bool peripheral = (x <= cuGlobals.w / PERIPHERAL_BOUND || y <= cuGlobals.h / PERIPHERAL_BOUND
+                  || x >= (PERIPHERAL_BOUND - 1)*cuGlobals.w / PERIPHERAL_BOUND || y >= (PERIPHERAL_BOUND - 1)*cuGlobals.h / PERIPHERAL_BOUND);
+  bool peripheral_kill = (x % PERIPHERAL_QUALITY + y % PERIPHERAL_QUALITY);
+  if (peripheral && peripheral_kill) return;
+
   int id = y * gridDim.x * blockDim.x + x;
   curandState localState = state[id];
+  
 
   Spectrum total = Spectrum();
   if (cuGlobals.ns_aa > 1) {
@@ -150,11 +160,24 @@ __global__ void raytrace_pixel(unsigned char *img, CMU462::Camera c, BVHGPU bvh,
     Ray r = c.generate_ray((x + 0.5) / cuGlobals.w, (y + 0.5) / cuGlobals.h);
     total = trace_ray(r, &bvh, &localState, true);
   }
-  int ind = 4 * (x + y * cuGlobals.w);
-  img[ind] = colorToChar(total.r);
-  img[ind + 1] = colorToChar(total.g);
-  img[ind + 2] = colorToChar(total.b);
-  img[ind + 3] = 255;
+
+  if (!peripheral) {
+    int ind = 4 * (x + y * cuGlobals.w);
+    img[ind] = colorToChar(total.r);
+    img[ind + 1] = colorToChar(total.g);
+    img[ind + 2] = colorToChar(total.b);
+    img[ind + 3] = 255;
+  } else {
+    for (int i = 0; i < PERIPHERAL_QUALITY; i++) {
+      for (int j = 0; j < PERIPHERAL_QUALITY; j++) {
+        int ind = 4 * ((x + i) + (y + j) * cuGlobals.w);
+        img[ind] = colorToChar(total.r);
+        img[ind + 1] = colorToChar(total.g);
+        img[ind + 2] = colorToChar(total.b);
+        img[ind + 3] = 255;
+      }
+    }
+  }
   //state[id] = localState;
 }
 
