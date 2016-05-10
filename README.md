@@ -25,11 +25,11 @@ Another very useful optimization we did was to limit the register count in our m
 Finally, one more optimization we did was to decrease image quality around the edges of the image, since the user is more likely to be looking at the center of the screen, they will rarely notice the difference. The center was chosen as an approximation of foveated rendering, since actual eye-tracking software is not yet available.
 
 ##Results
-We weren't able to test our full rendering code on a powerful machine like latedays, since it requires physical access to the machine and to install many libraries, unfortunately. However, on our testing laptop (NVIDIA 750M), we were able to render small scenes at medium-low quality at around 30 fps. It's worth noting that on single-frame tests, the latedays machines regularly got a 3-4x performance increase over our test machine, so on hardware that would typically be used to run VR systems, we would almost certainly hit the latency requirement.
-Unfortunately, on larger scenes, the number of incoherent memory accesses makes performance drop off quickly with the number of objects in the scene.
+We weren't able to test our full rendering code on a powerful machine like latedays, since it requires physical access to the machine and to install many libraries, unfortunately. However, on our testing laptop (NVIDIA 750M), we were able to render small scenes at medium-low quality at around 30 fps. It's worth noting that on single-frame tests, the latedays machines regularly got a 3-4x performance increase over our test machine, so on hardware that would typically be used to run VR systems, we would almost certainly hit the latency requirement. Unfortunately, on larger scenes, the number of incoherent memory accesses makes performance drop off quickly with the number of objects in the scene.
+Code profiling revealed that the major bottleneck of our final program was global memory bandwidth. Originally, performance was primarily limited by memory and execution dependency, so this means that our improvements were able to succesfully increase the latency hiding ability of our kernel.
 
 ##References
-CHRIS. DO THIS SECTION PLEASE.
+We referenced two papers throughout the project. We used https://mediatech.aalto.fi/~samuli/publications/aila2009hpg_paper.pdf to guide our changes to the BVH traversal code, and https://mediatech.aalto.fi/~samuli/publications/laine2013hpg_paper.pdf gave suggestions on how to restructure the program as a whole.
 
 Equal work was performed by both project members.
 
