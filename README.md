@@ -1,7 +1,41 @@
 # GPU Accelerated RayTracing for VR
 Chris Kaffine and Zach Shearer
 
-##Parallelism Competition Update
+#Final Writeup
+We implemented a GPU accelerated raytracer in CUDA to be used in VR applications, utilizing some VR specific optimizations.
+
+##Background
+Raytracing is a way of simulating realistic light interacting with a scene, in order to create more realistic looking images than using rasterization methods. Given as inputs is a scene, consisting of objects and light sources, and a camera, outputting an image simulating what this scene would look like. At its core, there are 7 steps to raytracing:
+
+1. Sample a ray from the camera
+2. Cast the ray into the scene and find where it intersects
+3. Sample a ray from the intersection point to the light
+4. Cast this shadow ray into the scene to see if the light source is blocked
+5. Compute the radiance along the ray path
+6. Probabilistically determine if the ray path should continue being evaluated
+7. If so, sample a reflection ray and go back to step 2.
+
+The computationally expensive part of raytracing is that there must be at least as many of these camera rays as pixels on the screen, which for an Oculus DK2 is over 2 million camera rays, and this will generate very low quality images. However, raytracing lends itself well to parallelization, in that each of these cameras can be evaluated completely independently of each other. However, bacause of the way that ray-scene intersections are tested (using a Bounding Volume Hierarchy), some rays can short-circuit this intersection test, which can potentially cause a lot of divergent execution. Additionally, rays will hit all different parts of the scenes, and will hit even more when reflected, which causes the need for a high number of incoherent memory accesses. Finally, VR settings require very low latency, typically the desired frame rates fall in the 75-90 fps range.
+
+##Approach
+We started out with a CPU implementation of raytracing (from 15-462), and ported it to run on a GPU using CUDA. This was done by mapping each pixel to a CUDA thread, where each pixel consisted of evaluating a user-specified number of rays. 
+Our first attempt at improving performance was to try to reduce divergent execution by pruning inactive ray paths. This was done by maintaining a global pool of active rays that threads draw from to process. However, this system requires some overhead in synchronization and sorting, which turned out to be too much, given the low latency requirements of VR. Additionally, after some profiling, we determined that the bottleneck in the sysytem is the incoherent memory accesses, not divergent execution.
+Our next approach was to try to reduce incoherent memory accesses. To do this, we changed many of our data structures to use CUDA vector types, to take advantage of more efficient vector load/store instructions. Also, we switched our arrays of structures to be structures of arrays, to have all threads in a warp accessing a contiguous block of memory when they all access the same field in a structure. Finally, we cached our frequently updated data structures in shared memory to reduce global memory traffic.
+Another very useful optimization we did was to limit the register count in our main kernel to 64, after noticing that it initially required over 100. With the initial register count, the number of blocks that could run on the device at the same time was low, so we were missing out on most of the latency hiding abilities of a GPU. By reducing this to 64, we were able to fit more blocks on the device at the same time, which hid the latency much better, giving over a 2x speedup.
+Finally, one more optimization we did was to decrease image quality around the edges of the image, since the user is more likely to be looking at the center of the screen, they will rarely notice the difference. The center was chosen as an approximation of foveated rendering, since actual eye-tracking software is not yet available.
+
+##Results
+We weren't able to test our full rendering code on a powerful machine like latedays, since it requires physical access to the machine and to install many libraries, unfortunately. However, on our testing laptop (NVIDIA 750M), we were able to render small scenes at medium-low quality at around 30 fps. It's worth noting that on single-frame tests, the latedays machines regularly got a 3-4x performance increase over our test machine, so on hardware that would typically be used to run VR systems, we would almost certainly hit the latency requirement.
+Unfortunately, on larger scenes, the number of incoherent memory accesses makes performance drop off quickly with the number of objects in the scene.
+
+##References
+CHRIS. DO THIS SECTION PLEASE.
+
+Equal work was performed by both project members.
+
+
+
+#Parallelism Competition Update
 At this point in time, we've implemented a more intelligent GPU raytracer, with an improved BVH traversal method, where all threads in a warp traverse until they reach a leaf. At that time, they all check over all primitives in the leaf, which improved performance on scenes with larger BVHs, as it helps reduce divergent execution. We did extensive performance analysis to determine the main bottlenecks of the naive raytracing implementation, and found that the largest was the ray-triangle intersection code. This was because it generated a large number of non-contiguous memory requests, which while it didn't approach the maximum bandwidth, the sheer volume created some issues with latency. To fix this, we've altered some of our data structures to help, and be able to utilize vector load instructions. Additionally, we've moved some of these to shared memory, and making a change from arrays of structures to structures of arrays. We also determined that the number of registers required by our kernel was limiting the occupancy of the kernel on the device, which reduced our latency hiding ability. To combat this, we determined what the best number of registers to use in our kernel was, and forced CUDA to use that number instead.
 With all of these optimizations, we've acheived around a 6x speedup over our naive GPU implementation.
 
